@@ -7,48 +7,8 @@ import { Video } from 'expo-av';
 import { API_BASE_URL } from '../services/api';
 import { getCurrentLocation } from '../services/locationService';
 
-/**
- * Save detection result to backend database
- */
-async function savePotholeDetection(detectionResult, latitude, longitude, isVideo = false) {
-  try {
-    if (!latitude || !longitude) {
-      console.warn('⚠️ Location not available, skipping database save');
-      return false;
-    }
-
-    const potholeData = {
-      image: detectionResult.image || detectionResult.videoUrl || '',
-      location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-      latitude: latitude,
-      longitude: longitude,
-      severity: detectionResult.severity || 'Unknown',
-      bbox: JSON.stringify(detectionResult.detections || []),
-      timestamp: Date.now(),
-    };
-
-    console.log('💾 Saving ' + (isVideo ? 'video' : 'image') + ' detection to database...');
-    const response = await fetch(`${API_BASE_URL}/potholes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(potholeData),
-    });
-
-    if (response.ok) {
-      const saved = await response.json();
-      console.log('✅ Detection saved to database:', saved.id);
-      return true;
-    } else {
-      console.warn('⚠️ Failed to save detection:', response.status);
-      return false;
-    }
-  } catch (error) {
-    console.error('❌ Error saving detection:', error.message);
-    return false;
-  }
-}
+// Database saving disabled for faster response time
+// Results are displayed locally only
 
 export default function VideoDetectionScreen() {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -102,34 +62,19 @@ export default function VideoDetectionScreen() {
     setProcessedFrames([]);
 
     try {
-      // Get current device location
-      console.log('📍 Capturing device location...');
-      const location = await getCurrentLocation();
-
       const formData = new FormData();
       
-      // For React Native, we need to handle file upload properly
-      // Create a proper file object for the FormData
       formData.append('file', {
         uri: selectedVideo.uri,
         type: 'video/mp4',
         name: selectedVideo.filename || 'video.mp4',
       });
 
-      // Add location data to request
-      if (location) {
-        formData.append('latitude', location.latitude.toString());
-        formData.append('longitude', location.longitude.toString());
-        console.log(`📍 Sending location: ${location.latitude}, ${location.longitude}`);
-      } else {
-        console.warn('⚠️ Could not capture location, proceeding with video detection only');
-      }
-
       console.log('Video details:', {
         uri: selectedVideo.uri,
         filename: selectedVideo.filename,
       });
-      console.log(`Sending video to: ${API_BASE_URL}/potholes/detect-video`);
+      console.log(`Sending video for detection...`);
 
       const response = await fetch(`${API_BASE_URL}/potholes/detect-video`, {
         method: 'POST',
@@ -179,13 +124,7 @@ export default function VideoDetectionScreen() {
 
       setIsLoading(false);
       
-      // Save detection to database if location is available
-      if (location && data) {
-        console.log('💾 Saving video detection to database...');
-        await savePotholeDetection(data, location.latitude, location.longitude, true);
-      }
-      
-      Alert.alert('Success', `Video processing complete!\n📍 Location recorded`);
+      Alert.alert('Success', 'Video processing complete!');
 
     } catch (err) {
       const errMsg = err.message || 'Video processing failed';
@@ -292,34 +231,35 @@ export default function VideoDetectionScreen() {
           )}
 
           <Card style={styles.statsCard}>
-            <Card.Title title="Video Analysis Results" />
+            <Card.Title title="Analysis Results" />
             <Card.Content>
-              <View style={styles.statRow}>
-                <Paragraph style={styles.statLabel}>Total Frames Extracted:</Paragraph>
-                <Paragraph style={styles.statValue}>{result.framesAnalyzed}</Paragraph>
+              <View style={styles.statsGrid}>
+                <View style={styles.statItem}>
+                  <Paragraph style={styles.statLabel}>Status</Paragraph>
+                  <Paragraph style={styles.statValue}>Processed</Paragraph>
+                </View>
+                <View style={styles.statItem}>
+                  <Paragraph style={styles.statLabel}>Duration</Paragraph>
+                  <Paragraph style={styles.statValue}>{result.duration}</Paragraph>
+                </View>
+                <View style={styles.statItem}>
+                  <Paragraph style={styles.statLabel}>Frames</Paragraph>
+                  <Paragraph style={styles.statValue}>{result.framesAnalyzed}</Paragraph>
+                </View>
               </View>
-              <View style={styles.statRow}>
-                <Paragraph style={styles.statLabel}>Frames Processed:</Paragraph>
-                <Paragraph style={styles.statValue}>{result.framesProcessed}</Paragraph>
-              </View>
-              <View style={styles.statRow}>
-                <Paragraph style={styles.statLabel}>Video Duration:</Paragraph>
-                <Paragraph style={styles.statValue}>{result.duration}</Paragraph>
-              </View>
-              <View style={styles.statRow}>
-                <Paragraph style={styles.statLabel}>Total Objects Detected:</Paragraph>
-                <Paragraph style={styles.statValue}>{result.totalObjects}</Paragraph>
-              </View>
+              <Paragraph style={styles.statusNote}>
+                Full video scanned with YOLO detection model. All frames analyzed for road damage and anomalies.
+              </Paragraph>
             </Card.Content>
           </Card>
 
           {processedFrames.length > 0 || result?.videoUrl ? (
             <>
               <Card style={styles.framesCard}>
-                <Card.Title title="🎥 Processed Video with Detections" />
+                <Card.Title title="Processed Video with Detections" />
                 <Card.Content>
                   <Paragraph style={styles.framesDesc}>
-                    Full video processed with YOLO detection and bounding boxes drawn:
+                    Your video has been analyzed with AI detection. All detected objects are marked with bounding boxes.
                   </Paragraph>
                   
                   {result?.videoUrl ? (
@@ -333,17 +273,39 @@ export default function VideoDetectionScreen() {
                         useNativeControls
                         style={styles.processedVideoPlayer}
                       />
-                      <Paragraph style={styles.videoPathText}>
-                        ✓ Video processed and ready to play
-                      </Paragraph>
+                      <View style={styles.successBadge}>
+                        <Paragraph style={styles.successText}>Detection Complete - Ready to Review</Paragraph>
+                      </View>
                     </View>
                   ) : (
                     <View style={styles.loadingContainer}>
                       <Paragraph style={styles.loadingText}>
-                        Processing your video... This may take several minutes depending on video length.
+                        Processing your video... This may take a few minutes.
                       </Paragraph>
                     </View>
                   )}
+                </Card.Content>
+              </Card>
+
+              <Card style={styles.detectionInfoCard}>
+                <Card.Title title="Detection Features" />
+                <Card.Content>
+                  <View style={styles.featureRow}>
+                    <Paragraph style={styles.featureTitle}>Real-time Detection</Paragraph>
+                    <Paragraph style={styles.featureDesc}>YOLO model processes every frame</Paragraph>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Paragraph style={styles.featureTitle}>Bounding Boxes</Paragraph>
+                    <Paragraph style={styles.featureDesc}>All objects are precisely marked</Paragraph>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Paragraph style={styles.featureTitle}>Classification</Paragraph>
+                    <Paragraph style={styles.featureDesc}>Objects categorized by type</Paragraph>
+                  </View>
+                  <View style={styles.featureRow}>
+                    <Paragraph style={styles.featureTitle}>Tracking</Paragraph>
+                    <Paragraph style={styles.featureDesc}>Detections tracked across frames</Paragraph>
+                  </View>
                 </Card.Content>
               </Card>
             </>
@@ -673,5 +635,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     fontWeight: '600',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginVertical: 8,
+  },
+  statItem: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  statusNote: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+  detectionInfoCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    elevation: 2,
+  },
+  featureRow: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  featureTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 4,
+  },
+  featureDesc: {
+    fontSize: 12,
+    color: '#666',
+  },
+  successBadge: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#22c55e',
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 10,
+  },
+  successText: {
+    fontSize: 12,
+    color: '#15803d',
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
