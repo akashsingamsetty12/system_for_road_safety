@@ -28,8 +28,9 @@ import com.example.backend.service.YoloDetectionService;
 @CrossOrigin(origins = "*")
 public class PotholeController {
 
-    @Autowired
-    private PotholeRepository repo;
+    // MongoDB removed for faster performance
+    // @Autowired
+    // private PotholeRepository repo;
 
     @Autowired
     private YoloDetectionService yoloDetectionService;
@@ -37,24 +38,16 @@ public class PotholeController {
     @Autowired
     private VideoDetectionService videoDetectionService;
 
-    @PostMapping
-    public Pothole save(@RequestBody Pothole pothole) {
-        // Set timestamp if not provided
-        if (pothole.getTimestamp() == null) {
-            pothole.setTimestamp(System.currentTimeMillis());
-        }
-        System.out.println("💾 Saving pothole: lat=" + pothole.getLatitude() + ", lng=" + pothole.getLongitude());
-        return repo.save(pothole);
-    }
+    // MongoDB save endpoint removed - using in-memory detection only
+    // @PostMapping
+    // public Pothole save(@RequestBody Pothole pothole) {
+    //     return repo.save(pothole);
+    // }
 
     @GetMapping
     public List<Pothole> getAll() {
-        List<Pothole> potholes = repo.findAll();
-        // If database is empty, return hardcoded locations
-        if (potholes == null || potholes.isEmpty()) {
-            return getKarnatakaPotholeLocations();
-        }
-        return potholes;
+        // Return hardcoded locations (MongoDB removed for speed)
+        return getKarnatakaPotholeLocations();
     }
 
     @GetMapping("/locations")
@@ -111,7 +104,7 @@ public class PotholeController {
         }
         
         return ResponseEntity.ok(result);
-    }
+    }[LOCATION]
 
     @PostMapping("/detect-video")
     public ResponseEntity<Map<String, Object>> detectVideo(@RequestParam("file") MultipartFile file,
@@ -132,7 +125,7 @@ public class PotholeController {
                 response.put("latitude", latitude);
                 response.put("longitude", longitude);
                 response.put("timestamp", System.currentTimeMillis());
-                System.out.println("📍 Video detection at location: " + latitude + ", " + longitude);
+                System.out.println("[LOCATION] Video detection at location: " + latitude + ", " + longitude);
             }
             
             // Cleanup old files
@@ -150,15 +143,15 @@ public class PotholeController {
     @GetMapping("/get-video")
     public ResponseEntity<byte[]> getProcessedVideo(@RequestParam("path") String filePath) throws IOException {
         try {
-            System.out.println("📹 GET /get-video called with path: " + filePath);
+            System.out.println("[VIDEO] GET /get-video called with path: " + filePath);
             byte[] videoBytes = videoDetectionService.getVideoFile(filePath);
-            System.out.println("✅ Video file loaded, size: " + videoBytes.length + " bytes");
+            System.out.println("[SUCCESS] Video file loaded, size: " + videoBytes.length + " bytes");
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"processed_video.mp4\"")
                     .contentType(MediaType.valueOf("video/mp4"))
                     .body(videoBytes);
         } catch (IOException e) {
-            System.err.println("❌ Error loading video: " + e.getMessage());
+            System.err.println("[ERROR] Error loading video: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.badRequest().body(new byte[0]);
         }

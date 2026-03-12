@@ -12,6 +12,26 @@ const getConfidenceColor = (confidence) => {
   return '#ef4444';
 };
 
+const getSeverityLevel = (avgConfidence) => {
+  if (avgConfidence > 0.8) return { level: 'Critical', color: '#dc2626' };
+  if (avgConfidence > 0.6) return { level: 'High', color: '#ea580c' };
+  if (avgConfidence > 0.4) return { level: 'Medium', color: '#f59e0b' };
+  return { level: 'Low', color: '#10b981' };
+};
+
+const calculateDetectionStats = (detections) => {
+  if (!detections || detections.length === 0) return null;
+  
+  const stats = {};
+  detections.forEach(detection => {
+    const className = detection.class || 'Unknown';
+    stats[className] = (stats[className] || 0) + 1;
+  });
+  
+  const avgConfidence = detections.reduce((sum, d) => sum + (d.confidence || 0), 0) / detections.length;
+  return { byClass: stats, avgConfidence };
+};
+
 /**
  * Save detection result to backend database
  */
@@ -98,19 +118,18 @@ export default function ImageDetectionScreen() {
 
   const handleDetect = async () => {
     if (!selectedImage) {
-      Alert.alert('⚠️ No Image Selected', 'Please capture or upload a photo first', [{ text: 'OK' }]);
+      Alert.alert('[WARNING] No Image Selected', 'Please capture or upload a photo first', [{ text: 'OK' }]);
       return;
     }
 
     setIsLoading(true);
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
-      Alert.alert('⏱️ Detection Timeout', `The backend server is taking too long to respond.\n\nBackend: ${API_BASE_URL}\n\nMake sure:\n• Backend server is running\n• Device has internet connection\n• API URL is correct`, [{ text: 'OK' }]);
+      Alert.alert('[TIMEOUT] Detection Timeout', `The backend server is taking too long to respond.\n\nBackend: ${API_BASE_URL}`, [{ text: 'OK' }]);
     }, 30000);
 
     try {
-      // Get current device location
-      console.log('📍 Capturing device location...');
+      console.log('[LOCATION] Capturing device location...');
       const location = await getCurrentLocation();
       
       const formData = new FormData();
@@ -120,16 +139,15 @@ export default function ImageDetectionScreen() {
         name: 'detection.jpg',
       });
       
-      // Add location data to request
       if (location) {
         formData.append('latitude', location.latitude.toString());
         formData.append('longitude', location.longitude.toString());
-        console.log(`📍 Sending location: ${location.latitude}, ${location.longitude}`);
+        console.log(`[LOCATION] Sending location: ${location.latitude}, ${location.longitude}`);
       } else {
-        console.warn('⚠️ Could not capture location, proceeding with detection only');
+        console.warn('[WARNING] Could not capture location, proceeding with detection only');
       }
 
-      console.log(`Uploading image to: ${API_BASE_URL}/potholes/detect`);
+      console.log(`[DETECT] Uploading image to: ${API_BASE_URL}/potholes/detect`);
       const response = await fetch(`${API_BASE_URL}/potholes/detect`, {
         method: 'POST',
         body: formData,
@@ -144,13 +162,10 @@ export default function ImageDetectionScreen() {
       const data = await response.json();
       setResult(data);
       
-      // Save detection to database if location is available
-      if (location && data) {
-        console.log('💾 Saving detection to database...');
-        await savePotholeDetection(data, location.latitude, location.longitude);
-      }
+      // Database save removed for instant results
+      // (MongoDB disabled on backend)
       
-      Alert.alert('✅ Detection Complete', `Found ${data.count || 0} object(s)\n📍 Location recorded`, [{ text: 'OK' }], { cancelable: false });
+      Alert.alert('[SUCCESS] Detection Complete', `Found ${data.count || 0} object(s)\nProcessing time: ${data.processing_time_seconds || 0}s`, [{ text: 'OK' }], { cancelable: false });
     } catch (err) {
       clearTimeout(timeoutId);
       Alert.alert('❌ Detection Failed', err.message || 'Unknown error occurred. Try again.', [{ text: 'OK' }]);
@@ -167,16 +182,16 @@ export default function ImageDetectionScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Title style={styles.headerTitle}>📷 Image Detection</Title>
+        <Title style={styles.headerTitle}>Image Detection</Title>
         <Paragraph style={styles.headerDesc}>
           Detect road damage, potholes, and litter in seconds
         </Paragraph>
         <View style={styles.stepIndicator}>
-          <Chip style={styles.activeStep}>1️⃣ Capture</Chip>
+          <Chip style={styles.activeStep}>1. Capture</Chip>
           <Paragraph style={styles.arrow}>→</Paragraph>
-          <Chip>2️⃣ Analyze</Chip>
+          <Chip>2. Analyze</Chip>
           <Paragraph style={styles.arrow}>→</Paragraph>
-          <Chip>3️⃣ View Results</Chip>
+          <Chip>3. View Results</Chip>
         </View>
       </View>
 
@@ -236,38 +251,136 @@ export default function ImageDetectionScreen() {
       {result && !isLoading && (
         <>
           {result.image && (
-            <Card style={styles.resultCard}>
-              <Card.Title 
-                title="✅ Detection Complete" 
-                subtitle={`Found ${result.count || 0} object(s)`}
-              />
-              <Card.Content>
-                <Image 
-                  source={{ uri: `data:image/jpeg;base64,${result.image}` }} 
-                  style={styles.resultImage}
+            <>
+              {/* Detected Image */}
+              <Card style={styles.resultCard}>
+                <Card.Title 
+                  title="Detection Result" 
+                  subtitle={`${result.count || 0} Object(s) Detected`}
                 />
-                
-                {/* Detection Details */}
-                {result.detections && result.detections.length > 0 && (
-                  <View style={styles.detailsContainer}>
-                    <Title style={styles.detailsTitle}>Detected Objects</Title>
+                <Card.Content>
+                  <Image 
+                    source={{ uri: `data:image/jpeg;base64,${result.image}` }} 
+                    style={styles.resultImage}
+                  />
+                </Card.Content>
+              </Card>
+
+              {/* Summary Stats */}
+              <Card style={styles.statsCard}>
+                <Card.Content>
+                  <Title style={styles.statsTitle}>Detection Summary</Title>
+                  
+                  <View style={styles.statRow}>
+                    <Paragraph style={styles.statLabel}>Total Detections:</Paragraph>
+                    <Paragraph style={styles.statValue}>{result.count || 0}</Paragraph>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <Paragraph style={styles.statLabel}>Processing Time:</Paragraph>
+                    <Paragraph style={styles.statValue}>{result.processing_time_seconds || 0}s</Paragraph>
+                  </View>
+
+                  <View style={styles.statRow}>
+                    <Paragraph style={styles.statLabel}>Image Dimensions:</Paragraph>
+                    <Paragraph style={styles.statValue}>{result.width}x{result.height}px</Paragraph>
+                  </View>
+
+                  {result.detections && result.detections.length > 0 && (() => {
+                    const stats = calculateDetectionStats(result.detections);
+                    const severity = getSeverityLevel(stats.avgConfidence);
+                    return (
+                      <>
+                        <View style={styles.severityRow}>
+                          <Paragraph style={styles.statLabel}>Overall Severity:</Paragraph>
+                          <Chip 
+                            style={[styles.severityChip, { backgroundColor: severity.color }]}
+                            textStyle={{ color: '#fff', fontWeight: 'bold' }}
+                          >
+                            {severity.level}
+                          </Chip>
+                        </View>
+                        
+                        <View style={styles.statRow}>
+                          <Paragraph style={styles.statLabel}>Avg Confidence:</Paragraph>
+                          <Paragraph style={styles.statValue}>{(stats.avgConfidence * 100).toFixed(1)}%</Paragraph>
+                        </View>
+                      </>
+                    );
+                  })()}
+                </Card.Content>
+              </Card>
+
+              {/* Detection by Class */}
+              {result.detections && result.detections.length > 0 && (() => {
+                const stats = calculateDetectionStats(result.detections);
+                return (
+                  <Card style={styles.classCard}>
+                    <Card.Content>
+                      <Title style={styles.statsTitle}>Detected Classes</Title>
+                      {Object.entries(stats.byClass).map(([className, count], idx) => (
+                        <View key={idx} style={styles.classItem}>
+                          <Paragraph style={styles.className}>{className}</Paragraph>
+                          <Chip style={{ backgroundColor: '#667eea' }} textStyle={{ color: '#fff' }}>
+                            {count}x
+                          </Chip>
+                        </View>
+                      ))}
+                    </Card.Content>
+                  </Card>
+                );
+              })()}
+
+              {/* Detailed Detections */}
+              {result.detections && result.detections.length > 0 && (
+                <Card style={styles.detailedCard}>
+                  <Card.Content>
+                    <Title style={styles.statsTitle}>Detailed Detections</Title>
+                    
                     {result.detections.map((detection, idx) => (
-                      <View key={idx} style={styles.detectionItem}>
-                        <View style={styles.detectionNameRow}>
-                          <Paragraph style={styles.detectionName}>
-                            {detection.class || `Object ${idx + 1}`}
-                          </Paragraph>
-                          <Paragraph style={styles.confidenceText}>
+                      <View key={idx} style={styles.detectionDetailCard}>
+                        <View style={styles.detectionHeader}>
+                          <View>
+                            <Paragraph style={styles.detectionIndex}>Detection #{idx + 1}</Paragraph>
+                            <Paragraph style={styles.detectionClass}>
+                              {detection.class || `Object ${idx + 1}`}
+                            </Paragraph>
+                          </View>
+                          <Paragraph style={[
+                            styles.confidencePercent,
+                            { color: getConfidenceColor(detection.confidence) }
+                          ]}>
                             {detection.confidence ? `${Math.round(detection.confidence * 100)}%` : 'N/A'}
                           </Paragraph>
                         </View>
-                        <View style={[styles.confidenceBar, { backgroundColor: getConfidenceColor(detection.confidence) }]} />
+
+                        <View style={[styles.confidenceBarContainer, { 
+                          backgroundColor: getConfidenceColor(detection.confidence) 
+                        }]}>
+                          <View style={styles.confidenceBarFill} />
+                        </View>
+
+                        {/* Bounding Box Coordinates */}
+                        <View style={styles.coordContainer}>
+                          <View style={styles.coordRow}>
+                            <Paragraph style={styles.coordLabel}>X:</Paragraph>
+                            <Paragraph style={styles.coordValue}>{detection.x1?.toFixed(0)} → {detection.x2?.toFixed(0)}</Paragraph>
+                          </View>
+                          <View style={styles.coordRow}>
+                            <Paragraph style={styles.coordLabel}>Y:</Paragraph>
+                            <Paragraph style={styles.coordValue}>{detection.y1?.toFixed(0)} → {detection.y2?.toFixed(0)}</Paragraph>
+                          </View>
+                          <View style={styles.coordRow}>
+                            <Paragraph style={styles.coordLabel}>Class ID:</Paragraph>
+                            <Paragraph style={styles.coordValue}>{detection.class_id || 'N/A'}</Paragraph>
+                          </View>
+                        </View>
                       </View>
                     ))}
-                  </View>
-                )}
-              </Card.Content>
-            </Card>
+                  </Card.Content>
+                </Card>
+              )}
+            </>
           )}
 
           <View style={styles.resultButtonGroup}>
@@ -361,45 +474,153 @@ const styles = StyleSheet.create({
   },
   resultCard: {
     marginHorizontal: 16,
-    elevation: 3,
+    marginBottom: 12,
+    elevation: 2,
   },
-  detailsContainer: {
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+  resultImage: {
+    width: '100%',
+    height: undefined,
+    aspectRatio: 1,
+    resizeMode: 'contain',
   },
-  detailsTitle: {
-    fontSize: 14,
+
+  // New styles for enhanced results
+  statsCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    backgroundColor: '#f0f4ff',
+    elevation: 2,
+  },
+  statsTitle: {
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: 12,
     color: '#333',
-  },
-  detectionItem: {
     marginBottom: 12,
   },
-  detectionNameRow: {
+  statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e4ff',
   },
-  detectionName: {
+  statLabel: {
     fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#667eea',
+  },
+  severityRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderTopWidth: 2,
+    borderTopColor: '#e0e4ff',
+    marginTop: 4,
+  },
+  severityChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+
+  // Class statistics card
+  classCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  classItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  className: {
+    fontSize: 14,
     fontWeight: '500',
     color: '#333',
     flex: 1,
   },
-  confidenceText: {
+
+  // Detailed detections
+  detailedCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    elevation: 2,
+  },
+  detectionDetailCard: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
+  },
+  detectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  detectionIndex: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+  },
+  detectionClass: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 2,
+  },
+  confidencePercent: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  confidenceBarContainer: {
+    height: 8,
+    borderRadius: 4,
+    marginBottom: 10,
+    opacity: 0.3,
+  },
+  confidenceBarFill: {
+    height: '100%',
+    backgroundColor: '#667eea',
+    borderRadius: 4,
+  },
+  coordContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 8,
+  },
+  coordRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  coordLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#667eea',
+    color: '#666',
+    width: 40,
   },
-  confidenceBar: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
+  coordValue: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'right',
   },
+
   resultButtonGroup: {
     flexDirection: 'row',
     paddingHorizontal: 16,
@@ -422,38 +643,5 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 12,
     marginHorizontal: 2,
-  },
-  resultCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  resultImage: {
-    width: '100%',
-    height: undefined,
-    aspectRatio: 1,
-    resizeMode: 'contain',
-  },
-  detectionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  detectionClass: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  detectionConfidence: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#10b981',
-  },
-  resetButton: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderColor: '#ef4444',
   },
 });

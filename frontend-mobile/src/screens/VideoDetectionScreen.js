@@ -102,39 +102,35 @@ export default function VideoDetectionScreen() {
     setProcessedFrames([]);
 
     try {
-      // Get current device location
-      console.log('📍 Capturing device location...');
+      console.log('[LOCATION] Capturing device location...');
       const location = await getCurrentLocation();
 
       const formData = new FormData();
       
-      // For React Native, we need to handle file upload properly
-      // Create a proper file object for the FormData
       formData.append('file', {
         uri: selectedVideo.uri,
         type: 'video/mp4',
         name: selectedVideo.filename || 'video.mp4',
       });
 
-      // Add location data to request
       if (location) {
         formData.append('latitude', location.latitude.toString());
         formData.append('longitude', location.longitude.toString());
-        console.log(`📍 Sending location: ${location.latitude}, ${location.longitude}`);
+        console.log(`[LOCATION] Sending location: ${location.latitude}, ${location.longitude}`);
       } else {
-        console.warn('⚠️ Could not capture location, proceeding with video detection only');
+        console.warn('[WARNING] Could not capture location, proceeding with video detection only');
       }
 
       console.log('Video details:', {
         uri: selectedVideo.uri,
         filename: selectedVideo.filename,
       });
-      console.log(`Sending video to: ${API_BASE_URL}/potholes/detect-video`);
+      console.log(`[DETECT] Sending video to: ${API_BASE_URL}/potholes/detect-video`);
 
       const response = await fetch(`${API_BASE_URL}/potholes/detect-video`, {
         method: 'POST',
         body: formData,
-        timeout: 3600000, // 1 hour timeout for video processing
+        timeout: 3600000,
         headers: {
           'Accept': 'application/json',
         },
@@ -145,30 +141,28 @@ export default function VideoDetectionScreen() {
       }
 
       const data = await response.json();
-      console.log('Backend response:', data);
+      console.log('[RESULT] Backend response:', data);
 
       if (!data.success) {
         throw new Error(data.message || 'Video processing failed');
       }
 
-      // Construct full video URL using API_BASE_URL
       let videoUrl = data.videoUrl || data.videoPath;
       if (videoUrl && !videoUrl.startsWith('http')) {
         videoUrl = `${API_BASE_URL}${videoUrl}`;
       }
       
-      console.log('Using video URL:', videoUrl);
+      console.log('[VIDEO] Using video URL:', videoUrl);
       
       setResult({
         framesAnalyzed: 'Full Video',
         framesProcessed: 'All Frames',
         duration: selectedVideo.duration ? `${(selectedVideo.duration / 1000).toFixed(2)}s` : 'Unknown',
         totalObjects: 'Processing Complete',
-        videoUrl: videoUrl,  // Store as videoUrl to match the video player check
-        videoPath: videoUrl, // Keep for backward compatibility
+        videoUrl: videoUrl,
+        videoPath: videoUrl,
       });
 
-      // Store one frame as thumbnail for display
       setProcessedFrames([{
         id: 0,
         time: 'Full Video',
@@ -179,13 +173,10 @@ export default function VideoDetectionScreen() {
 
       setIsLoading(false);
       
-      // Save detection to database if location is available
-      if (location && data) {
-        console.log('💾 Saving video detection to database...');
-        await savePotholeDetection(data, location.latitude, location.longitude, true);
-      }
+      // Database save removed for instant results
+      // (MongoDB disabled on backend)
       
-      Alert.alert('Success', `Video processing complete!\n📍 Location recorded`);
+      Alert.alert('[SUCCESS] Video Processing Complete', `Processing time: ${data.processing_time_seconds || 0}s`);
 
     } catch (err) {
       const errMsg = err.message || 'Video processing failed';
@@ -204,7 +195,7 @@ export default function VideoDetectionScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Title style={styles.headerTitle}>🎥 Video Detection</Title>
+        <Title style={styles.headerTitle}>Video Detection</Title>
         <Paragraph style={styles.headerDesc}>
           Upload or record videos for road damage detection
         </Paragraph>

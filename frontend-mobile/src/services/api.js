@@ -22,7 +22,7 @@ const modelClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     config.metadata = { startTime: Date.now() };
-    console.log(`📤 API Request: ${config.method.toUpperCase()} ${config.url}`);
+    console.log(`[REQUEST] ${config.method.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
@@ -31,13 +31,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     const duration = Date.now() - response.config.metadata.startTime;
-    console.log(`📥 API Response: ${response.status} ${response.config.url} [${duration}ms]`);
+    console.log(`[RESPONSE] ${response.status} ${response.config.url} [${duration}ms]`);
     return response;
   },
   (error) => {
     if (error.config?.metadata) {
       const duration = Date.now() - error.config.metadata.startTime;
-      console.error(`❌ API Error: ${error.config.url} [${duration}ms]`, error.message);
+      console.error(`[ERROR] ${error.config.url} [${duration}ms]`, error.message);
     }
     return Promise.reject(error);
   }
