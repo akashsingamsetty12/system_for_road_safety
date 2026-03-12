@@ -248,22 +248,34 @@ export default function ImageDetectionScreen() {
                       const severity = getObjectSeverity(detection.confidence);
                       const confidencePercent = Math.round((detection.confidence || 0) * 100);
                       
+                      // Calculate additional feature values
+                      const boxWidth = detection.x2 - detection.x1;
+                      const boxHeight = detection.y2 - detection.y1;
+                      const area = Math.round(boxWidth * boxHeight);
+                      const aspectRatio = (boxWidth / boxHeight).toFixed(2);
+                      const centerX = Math.round((detection.x1 + detection.x2) / 2);
+                      const centerY = Math.round((detection.y1 + detection.y2) / 2);
+                      const boxSizePercent = ((area / (result.width * result.height)) * 100).toFixed(2);
+                      
                       return (
                         <View key={idx} style={styles.detectionItemContainer}>
-                          {/* Severity Badge + Class Name */}
+                          {/* Severity Badge + Class Name + ID */}
                           <View style={styles.detectionHeader}>
                             <View style={[styles.severityBadge, { backgroundColor: severity.color }]}>
                               <Paragraph style={styles.severityText}>{severity.severity}</Paragraph>
                             </View>
-                            <Title style={styles.detectionClassName}>
-                              {detection.class || `Object ${idx + 1}`}
-                            </Title>
+                            <View style={styles.classInfoColumn}>
+                              <Title style={styles.detectionClassName}>
+                                {detection.class || `Object ${idx + 1}`}
+                              </Title>
+                              <Paragraph style={styles.classIdText}>ID: {detection.class_id || idx}</Paragraph>
+                            </View>
                           </View>
 
-                          {/* Confidence Score */}
+                          {/* Confidence Score Section */}
                           <View style={styles.confidenceSection}>
                             <View style={styles.confidenceHeader}>
-                              <Paragraph style={styles.confidenceLabel}>Confidence</Paragraph>
+                              <Paragraph style={styles.confidenceLabel}>Confidence Score</Paragraph>
                               <Paragraph style={[styles.confidencePercent, { color: getConfidenceColor(detection.confidence) }]}>
                                 {confidencePercent}%
                               </Paragraph>
@@ -281,17 +293,44 @@ export default function ImageDetectionScreen() {
                             </View>
                           </View>
 
-                          {/* Bounding Box Info */}
-                          {detection.x1 !== undefined && (
-                            <View style={styles.bboxInfo}>
-                              <Paragraph style={styles.bboxText}>
-                                Position: ({Math.round(detection.x1)}, {Math.round(detection.y1)})
-                              </Paragraph>
-                              <Paragraph style={styles.bboxText}>
-                                Size: {Math.round(detection.x2 - detection.x1)}x{Math.round(detection.y2 - detection.y1)}px
-                              </Paragraph>
+                          {/* Feature Values Grid */}
+                          <View style={styles.featureGrid}>
+                            {/* Bounding Box Coordinates */}
+                            <View style={styles.featureCard}>
+                              <Paragraph style={styles.featureLabel}>Bounding Box</Paragraph>
+                              <View style={styles.featureContent}>
+                                <Paragraph style={styles.featureValue}>↖️ ({Math.round(detection.x1)}, {Math.round(detection.y1)})</Paragraph>
+                                <Paragraph style={styles.featureValue}>↙️ ({Math.round(detection.x2)}, {Math.round(detection.y2)})</Paragraph>
+                              </View>
                             </View>
-                          )}
+
+                            {/* Size Information */}
+                            <View style={styles.featureCard}>
+                              <Paragraph style={styles.featureLabel}>Dimensions</Paragraph>
+                              <View style={styles.featureContent}>
+                                <Paragraph style={styles.featureValue}>Width: {Math.round(boxWidth)}px</Paragraph>
+                                <Paragraph style={styles.featureValue}>Height: {Math.round(boxHeight)}px</Paragraph>
+                              </View>
+                            </View>
+
+                            {/* Area & Ratio */}
+                            <View style={styles.featureCard}>
+                              <Paragraph style={styles.featureLabel}>Area Analysis</Paragraph>
+                              <View style={styles.featureContent}>
+                                <Paragraph style={styles.featureValue}>Area: {area} px²</Paragraph>
+                                <Paragraph style={styles.featureValue}>Ratio: {boxSizePercent}% of image</Paragraph>
+                              </View>
+                            </View>
+
+                            {/* Aspect Ratio & Center */}
+                            <View style={styles.featureCard}>
+                              <Paragraph style={styles.featureLabel}>Position Details</Paragraph>
+                              <View style={styles.featureContent}>
+                                <Paragraph style={styles.featureValue}>Aspect Ratio: {aspectRatio}:1</Paragraph>
+                                <Paragraph style={styles.featureValue}>Center: ({centerX}, {centerY})</Paragraph>
+                              </View>
+                            </View>
+                          </View>
 
                           {idx < result.detections.length - 1 && <View style={styles.divider} />}
                         </View>
@@ -645,5 +684,40 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 20,
     borderColor: '#ef4444',
+  },
+  featureGrid: {
+    gap: 10,
+  },
+  featureCard: {
+    backgroundColor: '#f8f9fa',
+    borderLeftWidth: 4,
+    borderLeftColor: '#667eea',
+    padding: 12,
+    borderRadius: 6,
+    marginBottom: 8,
+  },
+  featureLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#667eea',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  featureContent: {
+    gap: 4,
+  },
+  featureValue: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  classInfoColumn: {
+    flex: 1,
+  },
+  classIdText: {
+    fontSize: 11,
+    color: '#666',
+    marginTop: 2,
   },
 });

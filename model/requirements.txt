@@ -1,9 +1,9 @@
-ultralytics
+opencv-python>=4.8.0
+opencv-contrib-python>=4.8.0
+numpy
 fastapi
 uvicorn[standard]
-opencv-python
-opencv-contrib-python
-numpy
 python-multipart
 pydantic
 requests
+Pillow

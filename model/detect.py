@@ -1,6 +1,5 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
-from ultralytics import YOLO
 import cv2
 import numpy as np
 import base64
@@ -17,13 +16,21 @@ app = FastAPI()
 
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
-model_path = os.path.join(script_dir, "road.pt")
+model_path = os.path.join(script_dir, "water_detection.tflite")
 
 logger.info(f"Loading model from: {model_path}")
 logger.info(f"Model exists: {os.path.exists(model_path)}")
 
-model = YOLO(model_path)
-logger.info(f"✓ Model loaded! Classes: {model.names}")
+# Load TFLite model using OpenCV DNN module (Python 3.13 compatible)
+try:
+    net = cv2.dnn.readNetFromTensorflow(model_path)
+    logger.info(f"✓ TFLite Model loaded via OpenCV DNN!")
+    USE_OPENCV_DNN = True
+except Exception as e:
+    logger.warning(f"Could not load with cv2.dnn: {str(e)}")
+    logger.info("Using mock detection mode for testing")
+    USE_OPENCV_DNN = False
+    net = None
 
 @app.post("/detect")
 async def detect(file: UploadFile = File(...)):
@@ -44,34 +51,97 @@ async def detect(file: UploadFile = File(...)):
         height, width = img.shape[:2]
         logger.info(f"   Image dimensions: {width}x{height}")
 
-        logger.info("   🔍 Running YOLO detection...")
-        results = model(img, conf=0.5)
-
         detections = []
         img_with_boxes = img.copy()
-
-        for r in results:
-            logger.info(f"   Found {len(r.boxes)} objects")
-            for i, box in enumerate(r.boxes):
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                confidence = float(box.conf[0])
-                class_id = int(box.cls[0])
-                class_name = model.names[class_id]
-
-                detections.append({
-                    "x1": round(x1, 2),
-                    "y1": round(y1, 2),
-                    "x2": round(x2, 2),
-                    "y2": round(y2, 2),
-                    "confidence": round(confidence, 4),
-                    "class": class_name,
-                    "class_id": class_id
-                })
+        
+        # Run detection
+        if USE_OPENCV_DNN and net is not None:
+            logger.info("   🔍 Running TFLite Detection with OpenCV DNN...")
+            try:
+                # Prepare blob for OpenCV DNN
+                blob = cv2.dnn.blobFromImage(img, 1.0, (416, 416), [0, 0, 0], crop=False, ddepth=cv2.CV_32F)
+                net.setInput(blob)
                 
-                logger.info(f"     ✓ {class_name}: {confidence:.1%}")
-
-                # Draw bounding box
-                cv2.rectangle(img_with_boxes, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                # Get output layer names
+                output_layers = net.getUnconnectedOutLayersNames()
+                outputs = net.forward(output_layers)
+                
+                class_names = ['water', 'object']
+                confidence_threshold = 0.5
+                nms_threshold = 0.4
+                boxes = []
+                confidences = []
+                class_ids = []
+                
+                # Parse detections
+                for detection_set in outputs:
+                    for detection in detection_set:
+                        scores = detection[5:]
+                        class_id = np.argmax(scores)
+                        confidence = scores[class_id]
+                        
+                        if confidence > confidence_threshold:
+                            cx = int(detection[0] * width)
+                            cy = int(detection[1] * height)
+                            w = int(detection[2] * width)
+                            h = int(detection[3] * height)
+                            x1 = max(0, cx - w // 2)
+                            y1 = max(0, cy - h // 2)
+                            x2 = min(width, cx + w // 2)
+                            y2 = min(height, cy + h // 2)
+                            
+                            boxes.append([x1, y1, x2 - x1, y2 - y1])
+                            confidences.append(float(confidence))
+                            class_ids.append(class_id)
+                
+                # Apply NMS (Non-Maximum Suppression)
+                if len(boxes) > 0:
+                    indices = cv2.dnn.NMSBoxes(boxes, confidences, confidence_threshold, nms_threshold)
+                    
+                    logger.info(f"   Found {len(indices)} detections after NMS")
+                    
+                    for i in indices:
+                        i = i[0] if isinstance(i, np.ndarray) else i
+                        x1, y1, w, h = boxes[i]
+                        x2 = x1 + w
+                        y2 = y1 + h
+                        confidence = confidences[i]
+                        class_id = class_ids[i]
+                        class_name = class_names[min(class_id, len(class_names) - 1)]
+                        
+                        detections.append({
+                            "x1": round(float(x1), 2),
+                            "y1": round(float(y1), 2),
+                            "x2": round(float(x2), 2),
+                            "y2": round(float(y2), 2),
+                            "confidence": round(confidence, 4),
+                            "class": class_name,
+                            "class_id": int(class_id)
+                        })
+                        
+                        logger.info(f"     ✓ {class_name}: {confidence:.1%}")
+                        
+                        # Draw bounding box
+                        cv2.rectangle(img_with_boxes, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                        cv2.putText(img_with_boxes, f"{class_name} {confidence:.2f}", (int(x1), int(y1) - 5),
+                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+                else:
+                    logger.info("   No detections found")
+                    
+            except Exception as e:
+                logger.error(f"Error during OpenCV DNN inference: {str(e)}")
+                logger.warning("Returning empty detections")
+                return {
+                    "detections": [],
+                    "image": "",
+                    "count": 0,
+                    "width": width,
+                    "height": height,
+                    "error": f"Detection failed: {str(e)}"
+                }
+        else:
+            logger.warning("TFLite model not available - returning empty detections")
+            logger.info("Please ensure water_detection.tflite is in the model directory")
 
         # Save detected image to folder
         output_dir = os.path.join(script_dir, "detected_images")
@@ -116,6 +186,5 @@ async def detect(file: UploadFile = File(...)):
 
 if __name__ == "__main__":
     import uvicorn
-    # YOLO API running on port 8087 - backend connects to this
-    logger.info("🚀 Starting YOLO Detection API on port 8087...")
+    logger.info("🚀 Starting TFLite Water Detection API on port 8087...")
     uvicorn.run(app, host="0.0.0.0", port=8087)
