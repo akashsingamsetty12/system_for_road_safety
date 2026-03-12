@@ -1,7 +1,6 @@
 package com.example.backend.controller;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.example.backend.model.Location;
 import com.example.backend.model.Pothole;
 import com.example.backend.repository.PotholeRepository;
 import com.example.backend.service.VideoDetectionService;
@@ -41,21 +39,84 @@ public class PotholeController {
 
     @PostMapping
     public Pothole save(@RequestBody Pothole pothole) {
+        // Set timestamp if not provided
+        if (pothole.getTimestamp() == null) {
+            pothole.setTimestamp(System.currentTimeMillis());
+        }
+        System.out.println("💾 Saving pothole: lat=" + pothole.getLatitude() + ", lng=" + pothole.getLongitude());
         return repo.save(pothole);
     }
 
     @GetMapping
     public List<Pothole> getAll() {
-        return repo.findAll();
+        List<Pothole> potholes = repo.findAll();
+        // If database is empty, return hardcoded locations
+        if (potholes == null || potholes.isEmpty()) {
+            return getKarnatakaPotholeLocations();
+        }
+        return potholes;
+    }
+
+    @GetMapping("/locations")
+    public List<Pothole> getKarnatakaPotholeLocations() {
+        List<Pothole> locations = new java.util.ArrayList<>();
+        String[] areaNames = {
+            "Downtown District", "Highway Zone", "Suburbs", "Market Street", "Park Avenue",
+            "Main Street", "Broadway", "Central Park", "Fifth Avenue", "Wall Street",
+            "Bengaluru Road", "Whitefield Area", "Koramangala", "Indiranagar", "Vijaynagar",
+            "Mysore Road", "Bannerghatta", "Electronic City", "Bellandur", "Sarjapur"
+        };
+
+        double minLat = 12.5;
+        double maxLat = 18.0;
+        double minLng = 74.5;
+        double maxLng = 78.5;
+
+        for (int i = 0; i < 100; i++) {
+            Pothole pothole = new Pothole();
+            pothole.setId("demo_" + i);
+            double latitude = minLat + Math.random() * (maxLat - minLat);
+            double longitude = minLng + Math.random() * (maxLng - minLng);
+            pothole.setLatitude(latitude);
+            pothole.setLongitude(longitude);
+
+            int issues = (int)(Math.random() * 100) + 1;
+            pothole.setIssues(issues);
+
+            String severity = issues > 60 ? "Critical" : issues > 35 ? "High" : issues > 15 ? "Medium" : "Low";
+            pothole.setSeverity(severity);
+
+            pothole.setArea(areaNames[i % areaNames.length] + " Zone " + (i + 1));
+            pothole.setLocation(areaNames[i % areaNames.length]);
+            pothole.setTimestamp(System.currentTimeMillis() - (long)(Math.random() * 86400000)); // Random time in last 24 hours
+
+            locations.add(pothole);
+        }
+
+        return locations;
     }
 
     @PostMapping("/detect")
-    public ResponseEntity<Map<String, Object>> detect(@RequestParam("file") MultipartFile file) throws IOException {
-        return ResponseEntity.ok(yoloDetectionService.detectImage(file));
+    public ResponseEntity<Map<String, Object>> detect(@RequestParam("file") MultipartFile file,
+                                                       @RequestParam(value = "latitude", required = false) Double latitude,
+                                                       @RequestParam(value = "longitude", required = false) Double longitude) throws IOException {
+        Map<String, Object> result = yoloDetectionService.detectImage(file);
+        
+        // Add location and timestamp to result if provided
+        if (latitude != null && longitude != null) {
+            result.put("latitude", latitude);
+            result.put("longitude", longitude);
+            result.put("timestamp", System.currentTimeMillis());
+            System.out.println("📍 Detection at location: " + latitude + ", " + longitude);
+        }
+        
+        return ResponseEntity.ok(result);
     }
 
     @PostMapping("/detect-video")
-    public ResponseEntity<Map<String, Object>> detectVideo(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<Map<String, Object>> detectVideo(@RequestParam("file") MultipartFile file,
+                                                           @RequestParam(value = "latitude", required = false) Double latitude,
+                                                           @RequestParam(value = "longitude", required = false) Double longitude) throws IOException {
         try {
             String processedVideoPath = videoDetectionService.processVideo(file);
             Map<String, Object> response = new HashMap<>();
@@ -65,6 +126,14 @@ public class PotholeController {
                         java.net.URLEncoder.encode(processedVideoPath, "UTF-8"));
             response.put("videoPath", processedVideoPath);
             response.put("message", "Video processed successfully");
+            
+            // Add location and timestamp to result if provided
+            if (latitude != null && longitude != null) {
+                response.put("latitude", latitude);
+                response.put("longitude", longitude);
+                response.put("timestamp", System.currentTimeMillis());
+                System.out.println("📍 Video detection at location: " + latitude + ", " + longitude);
+            }
             
             // Cleanup old files
             videoDetectionService.cleanupOldFiles();
@@ -95,57 +164,5 @@ public class PotholeController {
         }
     }
 
-    @GetMapping("/locations")
-    public List<Location> getRandomLocations() {
-        return generateRandomLocations();
-    }
-
-    private List<Location> generateRandomLocations() {
-        String[] areaNames = {
-            "Downtown District", "Highway Zone", "Suburbs", "Market Street", "Park Avenue",
-            "Main Street", "Broadway", "Central Park", "Fifth Avenue", "Wall Street",
-            "Times Square", "Brooklyn Heights", "Queens", "Harlem", "Upper East Side",
-            "Lower East Side", "West Village", "Chelsea", "Midtown", "Financial District",
-            "SoHo", "TriBeCa", "Chinatown", "Little Italy", "Nolita",
-            "East Village", "NoHo", "Gramercy", "Flatiron", "Murray Hill",
-            "Kips Bay", "Stuyvesant Town", "Astoria", "Long Island City", "Williamsburg",
-            "Greenpoint", "Bushwick", "Bed-Stuy", "Crown Heights", "Park Slope",
-            "Prospect Heights", "Washington Heights", "Inwood", "Jackson Heights", "Bayside"
-        };
-        
-        String[] roadTypes = {"State Highway", "City Street", "Main Road", "Local Road", "Express Way", "Arterial Road"};
-        String[] statuses = {"Open", "Under Repair", "Monitoring", "Closed", "Pending"};
-
-        List<Location> locations = new ArrayList<>();
-        double baseLat = 17.385044;
-        double baseLng = 78.486671;
-
-        for (int i = 0; i < 100; i++) {
-            double lat = baseLat + (Math.random() - 0.5) * 0.3;
-            double lng = baseLng + (Math.random() - 0.5) * 0.3;
-            int issues = (int) (Math.random() * 80) + 5;
-            String areaName = areaNames[(int) (Math.random() * areaNames.length)];
-            String roadType = roadTypes[(int) (Math.random() * roadTypes.length)];
-            String status = statuses[(int) (Math.random() * statuses.length)];
-            int potholes = (int) (Math.random() * 20) + 1;
-            int cracks = (int) (Math.random() * 30) + 1;
-            String severity = issues > 50 ? "Critical" : issues > 25 ? "High" : "Moderate";
-            
-            locations.add(new Location(
-                i + 1,
-                areaName + " - Sector " + (char)(65 + (i % 26)),
-                issues,
-                String.format("%.6f", lat),
-                String.format("%.6f", lng),
-                severity,
-                roadType,
-                potholes,
-                cracks,
-                status
-            ));
-        }
-
-        return locations;
-    }
 }
 

@@ -1,41 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, Alert, Dimensions } from 'react-native';
 import { Button, Card, Title, Paragraph, ActivityIndicator } from 'react-native-paper';
-import * as Location from 'expo-location';
 
 export default function LocationScreen() {
   const [location, setLocation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [detections, setDetections] = useState([]);
-  const [errorMsg, setErrorMsg] = useState(null);
-
-  useEffect(() => {
-    requestLocationPermission();
-  }, []);
-
-  const requestLocationPermission = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      setErrorMsg('Permission to access location was denied');
-      return;
-    }
-  };
 
   const getCurrentLocation = async () => {
-    setIsLoading(true);
-    try {
-      const currentLocation = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation(currentLocation);
-      
-      // Simulate fetching nearby detections
-      simulateNearbyDetections(currentLocation.coords);
-    } catch (err) {
-      Alert.alert('Error', 'Could not fetch location');
-    } finally {
-      setIsLoading(false);
-    }
+    // Simulated location data
+    const mockLocation = {
+      coords: {
+        latitude: 17.385044,
+        longitude: 78.486671,
+        accuracy: 10
+      }
+    };
+    setLocation(mockLocation);
+    simulateNearbyDetections(mockLocation.coords);
   };
 
   const simulateNearbyDetections = (coords) => {

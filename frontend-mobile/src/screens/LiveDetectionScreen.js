@@ -3,8 +3,51 @@ import { View, StyleSheet, Alert, Dimensions, Image } from 'react-native';
 import { Button, Card, Title, Paragraph, ActivityIndicator } from 'react-native-paper';
 import { Camera } from 'expo-camera';
 import * as Location from 'expo-location';
+import { API_BASE_URL } from '../services/api';
+import { getCurrentLocation } from '../services/locationService';
 
-const BACKEND_URL = 'http://10.47.111.30:8082/api/potholes/detect';
+/**
+ * Save detection result to backend database
+ */
+async function savePotholeDetection(detectionResult, latitude, longitude) {
+  try {
+    if (!latitude || !longitude) {
+      console.warn('⚠️ Location not available, skipping database save');
+      return false;
+    }
+
+    const potholeData = {
+      image: detectionResult.image || '',
+      location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      latitude: latitude,
+      longitude: longitude,
+      severity: detectionResult.severity || 'Unknown',
+      bbox: JSON.stringify(detectionResult.detections || []),
+      timestamp: Date.now(),
+    };
+
+    console.log('💾 Saving live detection to database...');
+    const response = await fetch(`${API_BASE_URL}/potholes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(potholeData),
+    });
+
+    if (response.ok) {
+      const saved = await response.json();
+      console.log('✅ Live detection saved to database:', saved.id);
+      return true;
+    } else {
+      console.warn('⚠️ Failed to save live detection:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error saving live detection:', error.message);
+    return false;
+  }
+}
 
 export default function LiveDetectionScreen() {
   const [hasPermission, setHasPermission] = useState(null);
@@ -77,6 +120,10 @@ export default function LiveDetectionScreen() {
     const startTime = Date.now();
 
     try {
+      // Get current device location
+      console.log('📍 Capturing device location...');
+      const location = await getCurrentLocation();
+
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.7,
         base64: false,
@@ -89,7 +136,16 @@ export default function LiveDetectionScreen() {
         name: 'live_detection.jpg',
       });
 
-      const response = await fetch(BACKEND_URL, {
+      // Add location data to request
+      if (location) {
+        formData.append('latitude', location.latitude.toString());
+        formData.append('longitude', location.longitude.toString());
+        console.log(`📍 Sending location: ${location.latitude}, ${location.longitude}`);
+      } else {
+        console.warn('⚠️ Could not capture location, proceeding with detection only');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/potholes/detect`, {
         method: 'POST',
         body: formData,
         timeout: 15000,
@@ -116,6 +172,12 @@ export default function LiveDetectionScreen() {
           latency: latency,
           objectCount: data.count || 0,
         });
+
+        // Save detection to database if location is available and potholes detected
+        if (location && data.count && data.count > 0) {
+          console.log('💾 Saving live detection to database...');
+          await savePotholeDetection(data, location.latitude, location.longitude);
+        }
       } else {
         const errMsg = 'No image in response from API';
         console.warn(errMsg);

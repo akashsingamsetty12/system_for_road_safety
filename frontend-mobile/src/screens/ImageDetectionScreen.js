@@ -3,6 +3,7 @@ import { View, ScrollView, StyleSheet, Image, Alert } from 'react-native';
 import { Button, Card, Title, Paragraph, ActivityIndicator, SegmentedButtons, Chip } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../services/api';
+import { getCurrentLocation } from '../services/locationService';
 
 const getConfidenceColor = (confidence) => {
   if (!confidence) return '#ccc';
@@ -10,6 +11,49 @@ const getConfidenceColor = (confidence) => {
   if (confidence > 0.6) return '#f59e0b';
   return '#ef4444';
 };
+
+/**
+ * Save detection result to backend database
+ */
+async function savePotholeDetection(detectionResult, latitude, longitude) {
+  try {
+    if (!latitude || !longitude) {
+      console.warn('⚠️ Location not available, skipping database save');
+      return false;
+    }
+
+    const potholeData = {
+      image: detectionResult.image || '',
+      location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      latitude: latitude,
+      longitude: longitude,
+      severity: detectionResult.severity || 'Unknown',
+      bbox: JSON.stringify(detectionResult.detections || []),
+      timestamp: Date.now(),
+    };
+
+    console.log('💾 Saving pothole detection to database...');
+    const response = await fetch(`${API_BASE_URL}/potholes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(potholeData),
+    });
+
+    if (response.ok) {
+      const saved = await response.json();
+      console.log('✅ Pothole saved to database:', saved.id);
+      return true;
+    } else {
+      console.warn('⚠️ Failed to save pothole:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error saving pothole:', error.message);
+    return false;
+  }
+}
 
 export default function ImageDetectionScreen() {
   const [selectedImage, setSelectedImage] = useState(null);
@@ -65,12 +109,25 @@ export default function ImageDetectionScreen() {
     }, 30000);
 
     try {
+      // Get current device location
+      console.log('📍 Capturing device location...');
+      const location = await getCurrentLocation();
+      
       const formData = new FormData();
       formData.append('file', {
         uri: selectedImage,
         type: 'image/jpeg',
         name: 'detection.jpg',
       });
+      
+      // Add location data to request
+      if (location) {
+        formData.append('latitude', location.latitude.toString());
+        formData.append('longitude', location.longitude.toString());
+        console.log(`📍 Sending location: ${location.latitude}, ${location.longitude}`);
+      } else {
+        console.warn('⚠️ Could not capture location, proceeding with detection only');
+      }
 
       console.log(`Uploading image to: ${API_BASE_URL}/potholes/detect`);
       const response = await fetch(`${API_BASE_URL}/potholes/detect`, {
@@ -86,7 +143,14 @@ export default function ImageDetectionScreen() {
 
       const data = await response.json();
       setResult(data);
-      Alert.alert('✅ Detection Complete', `Found ${data.count || 0} object(s)`, [{ text: 'OK' }], { cancelable: false });
+      
+      // Save detection to database if location is available
+      if (location && data) {
+        console.log('💾 Saving detection to database...');
+        await savePotholeDetection(data, location.latitude, location.longitude);
+      }
+      
+      Alert.alert('✅ Detection Complete', `Found ${data.count || 0} object(s)\n📍 Location recorded`, [{ text: 'OK' }], { cancelable: false });
     } catch (err) {
       clearTimeout(timeoutId);
       Alert.alert('❌ Detection Failed', err.message || 'Unknown error occurred. Try again.', [{ text: 'OK' }]);

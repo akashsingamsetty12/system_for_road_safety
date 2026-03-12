@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, FlatList, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Menu } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import MapView, { Marker, Callout, UrlTile } from 'react-native-maps';
 import { API_BASE_URL } from '../services/api';
+import LeafletMapView from '../components/LeafletMapView';
 
 // Helper component for empty states
 function EmptyState({ icon, title, desc }) {
@@ -33,69 +33,137 @@ function TabButton({ active, onPress, icon, label }) {
   );
 }
 
-// Generate 100 random locations from backend, with local fallback
-async function fetchRandomLocations() {
+// Fetch locations from backend
+async function fetchLocationsData() {
   try {
-    console.log('Attempting to fetch locations from backend...', `URL: ${API_BASE_URL}/potholes/locations`);
-    const response = await fetch(`${API_BASE_URL}/potholes/locations`, { 
-      timeout: 5000 
+    console.log('📍 Fetching potholes from backend...');
+    
+    // Try to fetch from /locations endpoint first (hardcoded data)
+    let response = await fetch(`${API_BASE_URL}/potholes/locations`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      timeout: 10000,
     });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    
+    console.log('📍 Response status from /locations:', response.status);
+    
+    // Fallback to /potholes endpoint if /locations fails
+    if (!response.ok) {
+      console.warn(`⚠️ /locations endpoint failed (${response.status}), trying /potholes...`);
+      response = await fetch(`${API_BASE_URL}/potholes`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000,
+      });
+    }
+    
+    if (!response.ok) {
+      console.warn(`❌ HTTP ${response.status}, using mock data`);
+      return generateMockLocations();
+    }
+
     const data = await response.json();
-    console.log('Successfully fetched locations from backend:', data?.length || 0, 'items');
-    return data;
+    
+    if (!Array.isArray(data)) {
+      console.warn('❌ Response is not an array, using mock data');
+      return generateMockLocations();
+    }
+    
+    console.log(`✅ Successfully fetched ${data.length} potholes from backend`);
+    
+    // Transform potholes to location format for map
+    const transformedLocations = data
+      .map((pothole, index) => {
+        try {
+          // Safely extract latitude/longitude as numbers
+          let lat = pothole.latitude;
+          let lng = pothole.longitude;
+          
+          // Convert to number if string
+          if (typeof lat === 'string') {
+            lat = parseFloat(lat);
+          }
+          if (typeof lng === 'string') {
+            lng = parseFloat(lng);
+          }
+          
+          // Validate the values are proper numbers
+          if (lat === null || lat === undefined || lng === null || lng === undefined) {
+            console.warn(`⚠️ Missing coordinates for pothole ${pothole.id}:`, { lat, lng });
+            return null;
+          }
+          
+          if (isNaN(lat) || isNaN(lng) || !isFinite(lat) || !isFinite(lng)) {
+            console.warn(`⚠️ Invalid coordinates for pothole ${pothole.id}:`, { lat, lng });
+            return null;
+          }
+          
+          return {
+            id: pothole.id || `pothole_${index}`,
+            latitude: lat,
+            longitude: lng,
+            severity: pothole.severity || 'Unknown',
+            area: pothole.area || pothole.location || `Area ${index + 1}`,
+            issues: pothole.issues || 0,
+            location: pothole.location,
+            timestamp: pothole.timestamp,
+            _original: pothole,
+          };
+        } catch (error) {
+          console.warn(`⚠️ Error transforming pothole ${index}:`, error);
+          return null;
+        }
+      })
+      .filter(item => item !== null);
+    
+    console.log(`✅ Transformed ${transformedLocations.length} valid locations`);
+    return transformedLocations;
+    
   } catch (error) {
-    console.warn('Failed to fetch from backend, using local data:', error.message);
-    // Fallback: Generate locations locally
-    return generateLocalLocations();
+    console.warn('⚠️ Failed to fetch from backend:', error.message);
+    console.log('📍 Using mock location data as fallback...');
+    return generateMockLocations();
   }
 }
 
-// Generate 100 random locations locally as fallback
-function generateLocalLocations() {
+// Generate mock locations for demo
+function generateMockLocations() {
   const areaNames = [
-    "Downtown District", "Highway Zone", "Suburbs", "Market Street", "Park Avenue",
-    "Main Street", "Broadway", "Central Park", "Fifth Avenue", "Wall Street",
-    "Times Square", "Brooklyn Heights", "Queens", "Harlem", "Upper East Side",
-    "Lower East Side", "West Village", "Chelsea", "Midtown", "Financial District",
-    "SoHo", "TriBeCa", "Chinatown", "Little Italy", "Nolita",
-    "East Village", "NoHo", "Gramercy", "Flatiron", "Murray Hill",
-    "Kips Bay", "Stuyvesant Town", "Astoria", "Long Island City", "Williamsburg",
-    "Greenpoint", "Bushwick", "Bed-Stuy", "Crown Heights", "Park Slope",
-    "Prospect Heights", "Washington Heights", "Inwood", "Jackson Heights", "Bayside",
-    "Flushing", "Elmhurst", "Jackson Heights", "Woodside", "Corona",
-    "Astoria", "Long Island City", "Ditmars", "Sunnyside", "Hunters Point",
-    "Alphabet City", "East Side", "Stuyvesant", "Grammercy", "Madison",
-    "Park", "Central", "Riverside", "Upper West", "Upper East",
-    "Mid West", "Mid Town", "Lower East", "Lower West", "Financial",
-    "South", "North", "East", "West", "Central East",
-    "Central West", "North East", "North West", "South East", "South West",
-    "Harbor", "Bridge", "Park", "Heights", "Heights East", "Heights West",
-    "Ridge", "Ridge East", "Valley", "Summit", "Garden", "Garden City",
-    "Prospect", "Prospect Park", "Riverside Park", "Central Park", "Madison Park"
+    'Downtown District', 'Highway Zone', 'Suburbs', 'Market Street', 'Park Avenue',
+    'Main Street', 'Broadway', 'Central Park', 'Fifth Avenue', 'Wall Street',
   ];
 
   const locations = [];
-  const baseLat = 17.385044;
-  const baseLng = 78.486671;
+  const baseLat = 15.3173;
+  const baseLng = 75.7139;
 
   for (let i = 0; i < 100; i++) {
-    const lat = (baseLat + (Math.random() - 0.5) * 0.3).toFixed(6);
-    const lng = (baseLng + (Math.random() - 0.5) * 0.3).toFixed(6);
-    const issues = Math.floor(Math.random() * 75) + 5;
-    
+    const latitude = (baseLat + (Math.random() - 0.5) * 5).toFixed(6);
+    const longitude = (baseLng + (Math.random() - 0.5) * 5).toFixed(6);
+    const issues = Math.floor(Math.random() * 100) + 1;
+
+    const severity = issues > 60 ? 'Critical' : issues > 35 ? 'High' : issues > 15 ? 'Medium' : 'Low';
+
     locations.push({
       id: i + 1,
-      area: areaNames[i % areaNames.length] + ' ' + (Math.floor(i / areaNames.length) + 1),
-      lat: lat,
-      lng: lng,
+      area: areaNames[i % areaNames.length] + ' Zone ' + (i + 1),
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
       issues: issues,
-      severity: issues > 20 ? 'Critical' : issues > 10 ? 'High' : 'Moderate'
+      severity: severity,
     });
   }
 
   return locations;
 }
+
+
 
 export default function AdminDashboardScreen({ navigation }) {
   const [menuVisible, setMenuVisible] = useState(false);
@@ -112,8 +180,9 @@ export default function AdminDashboardScreen({ navigation }) {
   });
 
   useEffect(() => {
-    // Fetch locations from backend
-    fetchRandomLocations().then(data => {
+    console.log('📱 AdminDashboardScreen mounted - fetching locations...');
+    fetchLocationsData().then(data => {
+      console.log(`🗺️ Loaded ${data.length} locations into map`);
       setLocations(data);
     });
   }, []);
@@ -213,11 +282,12 @@ export default function AdminDashboardScreen({ navigation }) {
             label="Videos"
           />
           <TabButton
-            active={activeTab === 'location'}
-            onPress={() => setActiveTab('location')}
-            icon="map-marker-multiple"
-            label="Locations"
+            active={activeTab === 'map'}
+            onPress={() => setActiveTab('map')}
+            icon="map"
+            label="Map"
           />
+
         </View>
       </View>
 
@@ -226,7 +296,7 @@ export default function AdminDashboardScreen({ navigation }) {
         {activeTab === 'stats' && <StatisticsContent stats={stats} />}
         {activeTab === 'images' && <ImagesContent images={images} />}
         {activeTab === 'videos' && <VideosContent videos={videos} />}
-        {activeTab === 'location' && <LocationContent locations={locations} />}
+        {activeTab === 'map' && <MapContent locations={locations} />}
       </View>
     </ScrollView>
   );
@@ -456,44 +526,34 @@ function VideosContent({ videos }) {
   );
 }
 
-function LocationContent({ locations }) {
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [mapRegion, setMapRegion] = useState({
-    latitude: 17.385044,
-    longitude: 78.486671,
-    latitudeDelta: 0.5,
-    longitudeDelta: 0.5,
+function MapContent({ locations }) {
+  const [stats, setStats] = useState({
+    total: 0,
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
   });
 
+  // Calculate statistics from locations
   useEffect(() => {
-    if (locations && locations.length > 0) {
-      try {
-        const lats = locations
-          .map(l => parseFloat(l.lat))
-          .filter(lat => !isNaN(lat) && isFinite(lat));
-        const lngs = locations
-          .map(l => parseFloat(l.lng))
-          .filter(lng => !isNaN(lng) && isFinite(lng));
+    if (Array.isArray(locations)) {
+      const validLocations = locations.filter(l => {
+        const lat = typeof l.latitude === 'string' ? parseFloat(l.latitude) : l.latitude;
+        const lng = typeof l.longitude === 'string' ? parseFloat(l.longitude) : l.longitude;
+        return !isNaN(lat) && isFinite(lat) && !isNaN(lng) && isFinite(lng);
+      });
 
-        if (lats.length > 0 && lngs.length > 0) {
-          const minLat = Math.min(...lats);
-          const maxLat = Math.max(...lats);
-          const minLng = Math.min(...lngs);
-          const maxLng = Math.max(...lngs);
+      const newStats = {
+        total: validLocations.length,
+        critical: validLocations.filter(l => l.issues > 60).length,
+        high: validLocations.filter(l => l.issues > 35 && l.issues <= 60).length,
+        medium: validLocations.filter(l => l.issues > 15 && l.issues <= 35).length,
+        low: validLocations.filter(l => l.issues <= 15).length,
+      };
 
-          const latDelta = Math.max(maxLat - minLat, 0.01) * 1.5;
-          const lngDelta = Math.max(maxLng - minLng, 0.01) * 1.5;
-
-          setMapRegion({
-            latitude: (minLat + maxLat) / 2,
-            longitude: (minLng + maxLng) / 2,
-            latitudeDelta: latDelta,
-            longitudeDelta: lngDelta,
-          });
-        }
-      } catch (error) {
-        console.error('Error calculating map region:', error);
-      }
+      setStats(newStats);
+      console.log(`🗺️ Map Statistics: Total=${newStats.total}, Critical=${newStats.critical}`);
     }
   }, [locations]);
 
@@ -502,194 +562,83 @@ function LocationContent({ locations }) {
       {/* Header */}
       <View style={styles.listHeader}>
         <View>
-          <Title style={styles.sectionTitle}>Detected Locations</Title>
-          <Paragraph style={styles.sectionSubtitle}>Real-time map and locations</Paragraph>
+          <Title style={styles.sectionTitle}>Detection Map</Title>
+          <Paragraph style={styles.sectionSubtitle}>Interactive Leaflet Map - Tap to Open</Paragraph>
         </View>
       </View>
 
-      {/* Interactive Map */}
-      <Card style={[styles.mapContainer, styles.itemCard]}>
-        <MapView
-          style={styles.map}
-          region={mapRegion}
-          onRegionChange={setMapRegion}
-          provider={null}
-          scrollEnabled={true}
-          zoomEnabled={true}
-          pitchEnabled={false}
-          rotateEnabled={false}
-        >
-          <UrlTile
-            urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maximumZ={19}
-            minimumZ={0}
-            tileSize={256}
-            attribution="&copy; OpenStreetMap contributors"
-          />
-          {locations && locations.map((location) => (
-            <Marker
-              key={location.id}
-              coordinate={{
-                latitude: parseFloat(location.lat),
-                longitude: parseFloat(location.lng),
-              }}
-              title={location.area}
-              description={`${location.issues} issues detected`}
-              pinColor={location.issues > 20 ? '#ef4444' : location.issues > 10 ? '#f59e0b' : '#10b981'}
-              onPress={() => setSelectedLocation(location)}
-            >
-              <Callout>
-                <View style={styles.calloutContainer}>
-                  <Title style={styles.calloutTitle}>{location.area}</Title>
-                  <Paragraph style={styles.calloutText}>{location.issues} issues reported</Paragraph>
-                  <Paragraph style={styles.calloutCoords}>{location.lat}, {location.lng}</Paragraph>
-                </View>
-              </Callout>
-            </Marker>
-          ))}
-        </MapView>
+      {/* Statistics Cards */}
+      <View style={styles.statsGrid}>
+        <StatCard
+          title="Total"
+          value={stats.total}
+          icon="map-marker-multiple"
+          color="#667eea"
+        />
+        <StatCard
+          title="Critical"
+          value={stats.critical}
+          icon="alert"
+          color="#ef4444"
+        />
+        <StatCard
+          title="High"
+          value={stats.high}
+          icon="alert-circle"
+          color="#f59e0b"
+        />
+        <StatCard
+          title="Medium"
+          value={stats.medium}
+          icon="information"
+          color="#eab308"
+        />
+      </View>
+
+      {/* Map Component */}
+      <Card style={styles.itemCard}>
+        <LeafletMapView locations={locations} />
       </Card>
 
-      {/* Severity Legend Card */}
+      {/* Legend */}
       <Card style={[styles.itemCard, styles.legendCard]}>
         <Card.Content>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="shield-alert" size={24} color="#ef4444" />
-            <Title style={styles.cardTitle}>Issue Severity</Title>
+            <MaterialCommunityIcons name="information" size={24} color="#667eea" />
+            <Title style={styles.cardTitle}>Severity Legend</Title>
           </View>
-          
+
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
-            <Paragraph style={styles.legendText}>Critical (20+ issues)</Paragraph>
+            <Paragraph style={styles.legendText}>Critical (61+ issues)</Paragraph>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#f59e0b' }]} />
-            <Paragraph style={styles.legendText}>High (10-19 issues)</Paragraph>
+            <Paragraph style={styles.legendText}>High (36-60 issues)</Paragraph>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: '#eab308' }]} />
+            <Paragraph style={styles.legendText}>Medium (16-35 issues)</Paragraph>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-            <Paragraph style={styles.legendText}>Moderate (&lt;10 issues)</Paragraph>
+            <Paragraph style={styles.legendText}>Low (1-15 issues)</Paragraph>
           </View>
         </Card.Content>
       </Card>
 
-      {/* Selected Location Details */}
-      {selectedLocation && (
-        <Card style={[styles.itemCard, styles.selectedDetailCard]}>
-          <Card.Content>
-            <View style={styles.selectedHeader}>
-              <View>
-                <Title style={styles.itemTitle}>{selectedLocation.area}</Title>
-                <Paragraph style={styles.itemMeta}>
-                  {selectedLocation.issues} issue{selectedLocation.issues !== 1 ? 's' : ''} detected
-                </Paragraph>
-              </View>
-              <Button
-                icon="close"
-                onPress={() => setSelectedLocation(null)}
-                compact
-                style={styles.closeButton}
-              />
-            </View>
-
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailItem}>
-                <Paragraph style={styles.detailLabel}>Latitude</Paragraph>
-                <Paragraph style={styles.detailValue}>{selectedLocation.lat}</Paragraph>
-              </View>
-              <View style={styles.detailItem}>
-                <Paragraph style={styles.detailLabel}>Longitude</Paragraph>
-                <Paragraph style={styles.detailValue}>{selectedLocation.lng}</Paragraph>
-              </View>
-            </View>
-
-            <Button
-              mode="contained"
-              icon="directions"
-              onPress={() => Alert.alert('Navigation', `Opening directions to ${selectedLocation.area}...`)}
-              style={styles.navButton}
-              buttonColor="#667eea"
-            >
-              Navigate to Area
-            </Button>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* All Locations List */}
-      <View style={styles.locationsHeader}>
-        <Title style={styles.sectionTitle}>All Areas</Title>
-        <Paragraph style={styles.sectionSubtitle}>{locations?.length || 0} location{locations?.length !== 1 ? 's' : ''}</Paragraph>
-      </View>
-
-      {locations && locations.length > 0 ? (
-        <FlatList
-          scrollEnabled={false}
-          data={locations}
-          renderItem={({ item }) => {
-            const getSeverityColor = (issues) => {
-              if (issues > 20) return '#ef4444';
-              if (issues > 10) return '#f59e0b';
-              return '#10b981';
-            };
-
-            const getSeverityLabel = (issues) => {
-              if (issues > 20) return 'Critical';
-              if (issues > 10) return 'High';
-              return 'Moderate';
-            };
-
-            return (
-              <Card
-                style={[
-                  styles.itemCard,
-                  styles.locationCard,
-                  selectedLocation?.id === item.id && styles.selectedCard,
-                ]}
-                onPress={() => setSelectedLocation(item)}
-              >
-                <Card.Content>
-                  <View style={styles.locationCardHeader}>
-                    <View style={[styles.severityBadge, { backgroundColor: getSeverityColor(item.issues) }]}>
-                      <Paragraph style={styles.severityBadgeText}>{getSeverityLabel(item.issues)}</Paragraph>
-                    </View>
-                    <View style={styles.locationCardInfo}>
-                      <Title style={styles.itemTitle}>{item.area}</Title>
-                      <Paragraph style={styles.itemMeta}>
-                        {item.issues} issue{item.issues !== 1 ? 's' : ''} • Lat: {item.lat.substring(0, 8)}
-                      </Paragraph>
-                    </View>
-                    <Chip mode="flat" style={[styles.issueChip, { backgroundColor: getSeverityColor(item.issues) + '20' }]}>
-                      {item.issues}
-                    </Chip>
-                  </View>
-                </Card.Content>
-                <Card.Actions style={styles.cardActions}>
-                  <Button
-                    icon="map-marker"
-                    onPress={() => setSelectedLocation(item)}
-                    compact
-                    style={styles.actionButton}
-                  >
-                    View
-                  </Button>
-                  <Button
-                    icon="directions"
-                    onPress={() => Alert.alert('Navigation', `Opening directions to ${item.area}...`)}
-                    compact
-                    style={styles.actionButton}
-                  >
-                    Go
-                  </Button>
-                </Card.Actions>
-              </Card>
-            );
-          }}
-          keyExtractor={(item) => item.id.toString()}
-        />
-      ) : (
-        <EmptyState icon="alert-circle-outline" title="No Locations" desc="No detection locations yet" />
-      )}
+      {/* Instructions Card */}
+      <Card style={styles.itemCard}>
+        <Card.Content>
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="help-circle-outline" size={24} color="#667eea" />
+            <Title style={styles.cardTitle}>How to Use</Title>
+          </View>
+          <Paragraph style={styles.infoText}>
+            The map opens in your device's native browser when you tap "Open Full Map". This ensures the interactive Leaflet map works perfectly with all features like zooming, panning, and clicking markers.
+          </Paragraph>
+        </Card.Content>
+      </Card>
     </View>
   );
 }
@@ -1153,6 +1102,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     maxWidth: 200,
+  },
+  /* Map Styles */
+  mapContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 12,
+    elevation: 2,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  map: {
+    flex: 1,
+    backgroundColor: '#f3f4f6',
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#6b7280',
+    marginTop: 8,
+    lineHeight: 18,
   },
 });
 

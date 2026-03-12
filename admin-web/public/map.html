@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Road Detection Admin - Map View</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f3f4f6;
+      color: #1f2937;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      gap: 0;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .sidebar-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .sidebar-header p {
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    .stats-section {
+      padding: 20px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: #6b7280;
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+
+    .stat-value.critical {
+      color: #ef4444;
+    }
+
+    .stat-value.high {
+      color: #f59e0b;
+    }
+
+    .stat-value.medium {
+      color: #eab308;
+    }
+
+    .stat-value.low {
+      color: #10b981;
+    }
+
+    .locations-section {
+      padding: 20px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .locations-section h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .location-item {
+      padding: 12px;
+      border-radius: 8px;
+      background: #f9fafb;
+      margin-bottom: 10px;
+      cursor: pointer;
+      border-left: 4px solid #ccc;
+      transition: all 0.2s;
+      border: 1px solid #e5e7eb;
+    }
+
+    .location-item:hover {
+      background: #f3f4f6;
+      transform: translateX(4px);
+    }
+
+    .location-item.selected {
+      background: #eff6ff;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .location-item.critical {
+      border-left-color: #ef4444;
+    }
+
+    .location-item.high {
+      border-left-color: #f59e0b;
+    }
+
+    .location-item.medium {
+      border-left-color: #eab308;
+    }
+
+    .location-item.low {
+      border-left-color: #10b981;
+    }
+
+    .location-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 4px;
+    }
+
+    .location-meta {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .location-severity {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-top: 4px;
+      font-weight: 600;
+      color: white;
+    }
+
+    .location-severity.critical {
+      background: #ef4444;
+    }
+
+    .location-severity.high {
+      background: #f59e0b;
+    }
+
+    .location-severity.medium {
+      background: #eab308;
+      color: #000;
+    }
+
+    .location-severity.low {
+      background: #10b981;
+    }
+
+    /* Map */
+    .map-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    #map {
+      flex: 1;
+      background: #f3f4f6;
+    }
+
+    .map-header {
+      padding: 15px 20px;
+      background: white;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .map-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+
+    .map-controls {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-primary {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5568d3;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #1f2937;
+      border: 1px solid #e5e7eb;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      background: white;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e5e7eb;
+      border-top-color: #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Leaflet Customizations */
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      border: none;
+    }
+
+    .leaflet-popup-content {
+      margin: 0;
+      padding: 0;
+      font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    .popup-title {
+      font-weight: 600;
+      color: #1f2937;
+      padding: 10px 10px 5px 10px;
+    }
+
+    .popup-content {
+      padding: 0 10px;
+      color: #6b7280;
+      font-size: 12px;
+    }
+
+    .popup-coords {
+      padding: 5px 10px 10px 10px;
+      color: #9ca3af;
+      font-size: 11px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      z-index: 50;
+      max-width: 200px;
+    }
+
+    .legend h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 10px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .legend-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .refresh-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 50;
+      background: white;
+      border: 1px solid #e5e7eb;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: #667eea;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .refresh-btn:hover {
+      background: #f3f4f6;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .refresh-btn.loading {
+      animation: spin 1s linear infinite;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 40vh;
+      }
+
+      .map-container {
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h1>🛣️ Road Detection</h1>
+        <p>Admin Dashboard</p>
+      </div>
+
+      <div class="stats-section">
+        <div class="stat-item">
+          <span class="stat-label">Total Detections</span>
+          <span class="stat-value" id="totalDetections">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Critical</span>
+          <span class="stat-value critical" id="criticalCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">High</span>
+          <span class="stat-value high" id="highCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Medium</span>
+          <span class="stat-value medium" id="mediumCount">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Low</span>
+          <span class="stat-value low" id="lowCount">0</span>
+        </div>
+      </div>
+
+      <div class="locations-section">
+        <h3>Detection Areas</h3>
+        <div id="locationsList"></div>
+      </div>
+    </div>
+
+    <!-- Map Container -->
+    <div class="map-container">
+      <div class="map-header">
+        <h2>📍 Detection Map - Karnataka</h2>
+        <div class="map-controls">
+          <button class="btn btn-secondary" id="refreshBtn">
+            <i class="fas fa-sync-alt"></i> Refresh
+          </button>
+          <button class="btn btn-primary" id="centerBtn">
+            <i class="fas fa-map-marker-alt"></i> Center
+          </button>
+        </div>
+      </div>
+
+      <div id="map"></div>
+
+      <div class="legend">
+        <h4>Severity Levels</h4>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #ef4444;"></div>
+          <span>Critical (61+)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #f59e0b;"></div>
+          <span>High (36-60)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #eab308;"></div>
+          <span>Medium (16-35)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #10b981;"></div>
+          <span>Low (1-15)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <script>
+    // Initialize Map
+    let map = L.map('map').setView([12.9716, 77.5946], 8);
+    
+    // OpenStreetMap Tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    let markers = {};
+    let allLocations = [];
+    let selectedLocation = null;
+
+    // Get Severity Color
+    function getSeverityColor(issues) {
+      if (issues > 60) return '#ef4444';
+      if (issues > 35) return '#f59e0b';
+      if (issues > 15) return '#eab308';
+      return '#10b981';
+    }
+
+    function getSeverityLabel(issues) {
+      if (issues > 60) return 'Critical';
+      if (issues > 35) return 'High';
+      if (issues > 15) return 'Medium';
+      return 'Low';
+    }
+
+    // Create Custom Marker Icon
+    function createMarkerIcon(color) {
+      return L.divIcon({
+        html: `
+          <div style="
+            width: 32px;
+            height: 32px;
+            background: ${color};
+            border: 3px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            font-size: 18px;
+            color: white;
+          ">
+            <i class="fas fa-exclamation"></i>
+          </div>
+        `,
+        iconSize: [32, 32],
+        className: 'custom-marker',
+      });
+    }
+
+    // Fetch Locations from Backend
+    async function fetchLocations() {
+      try {
+        const response = await fetch('/api/potholes/locations');
+        const data = await response.json();
+        
+        if (!Array.isArray(data)) {
+          console.error('❌ Invalid data format:', data);
+          return [];
+        }
+
+        console.log(`✅ Fetched ${data.length} locations`);
+        return data;
+      } catch (error) {
+        console.error('❌ Error fetching locations:', error);
+        return [];
+      }
+    }
+
+    // Validate Coordinates
+    function isValidCoordinate(location) {
+      let lat = location.latitude;
+      let lng = location.longitude;
+
+      if (typeof lat === 'string') lat = parseFloat(lat);
+      if (typeof lng === 'string') lng = parseFloat(lng);
+
+      return !isNaN(lat) && isFinite(lat) && !isNaN(lng) && isFinite(lng);
+    }
+
+    // Render Map Markers
+    function renderMarkers(locations) {
+      // Clear old markers
+      Object.values(markers).forEach(m => map.removeLayer(m));
+      markers = {};
+
+      locations.forEach(location => {
+        if (!isValidCoordinate(location)) {
+          console.warn('⚠️ Invalid coordinates:', location);
+          return;
+        }
+
+        const lat = typeof location.latitude === 'string' ? parseFloat(location.latitude) : location.latitude;
+        const lng = typeof location.longitude === 'string' ? parseFloat(location.longitude) : location.longitude;
+        const issues = location.issues || 0;
+
+        const marker = L.marker([lat, lng], {
+          icon: createMarkerIcon(getSeverityColor(issues)),
+        })
+          .bindPopup(`
+            <div class="popup-title">${location.area || 'Location'}</div>
+            <div class="popup-content">
+              <strong>Severity:</strong> ${getSeverityLabel(issues)}<br>
+              <strong>Issues:</strong> ${issues}
+            </div>
+            <div class="popup-coords">${lat.toFixed(4)}, ${lng.toFixed(4)}</div>
+          `)
+          .addTo(map);
+
+        marker.on('click', () => selectLocation(location));
+        markers[location.id] = marker;
+      });
+    }
+
+    // Update Sidebar Stats
+    function updateStats(locations) {
+      const stats = {
+        total: locations.length,
+        critical: locations.filter(l => l.issues > 60).length,
+        high: locations.filter(l => l.issues > 35 && l.issues <= 60).length,
+        medium: locations.filter(l => l.issues > 15 && l.issues <= 35).length,
+        low: locations.filter(l => l.issues <= 15).length,
+      };
+
+      document.getElementById('totalDetections').textContent = stats.total;
+      document.getElementById('criticalCount').textContent = stats.critical;
+      document.getElementById('highCount').textContent = stats.high;
+      document.getElementById('mediumCount').textContent = stats.medium;
+      document.getElementById('lowCount').textContent = stats.low;
+    }
+
+    // Render Location List
+    function renderLocationsList(locations) {
+      const list = document.getElementById('locationsList');
+      list.innerHTML = locations
+        .sort((a, b) => b.issues - a.issues)
+        .slice(0, 20)
+        .map(
+          loc => `
+        <div class="location-item ${getSeverityLabel(loc.issues).toLowerCase()} ${
+            selectedLocation?.id === loc.id ? 'selected' : ''
+          }" onclick="selectLocation(${JSON.stringify(loc).replace(/"/g, '&quot;')})">
+          <div class="location-name">${loc.area}</div>
+          <div class="location-meta">${loc.issues} issues reported</div>
+          <span class="location-severity ${getSeverityLabel(loc.issues).toLowerCase()}">
+            ${getSeverityLabel(loc.issues)}
+          </span>
+        </div>
+      `
+        )
+        .join('');
+    }
+
+    // Select Location
+    function selectLocation(location) {
+      selectedLocation = location;
+      if (markers[location.id]) {
+        markers[location.id].openPopup();
+        const lat = typeof location.latitude === 'string' ? parseFloat(location.latitude) : location.latitude;
+        const lng = typeof location.longitude === 'string' ? parseFloat(location.longitude) : location.longitude;
+        map.setView([lat, lng], 15);
+      }
+      renderLocationsList(allLocations);
+    }
+
+    // Load All Data
+    async function loadData() {
+      const locations = await fetchLocations();
+      allLocations = locations.filter(isValidCoordinate);
+      
+      renderMarkers(allLocations);
+      updateStats(allLocations);
+      renderLocationsList(allLocations);
+
+      console.log(`🗺️ Rendered ${allLocations.length} markers on map`);
+    }
+
+    // Event Listeners
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('refreshBtn');
+      btn.classList.add('loading');
+      await loadData();
+      btn.classList.remove('loading');
+    });
+
+    document.getElementById('centerBtn').addEventListener('click', () => {
+      if (allLocations.length > 0) {
+        const lats = allLocations.map(l => 
+          typeof l.latitude === 'string' ? parseFloat(l.latitude) : l.latitude
+        );
+        const lngs = allLocations.map(l => 
+          typeof l.longitude === 'string' ? parseFloat(l.longitude) : l.longitude
+        );
+
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+
+        map.fitBounds([
+          [minLat, minLng],
+          [maxLat, maxLng],
+        ]);
+      }
+    });
+
+    // Auto-refresh every 30 seconds
+    setInterval(loadData, 30000);
+
+    // Initial Load
+    window.addEventListener('load', loadData);
+  </script>
+</body>
+</html>

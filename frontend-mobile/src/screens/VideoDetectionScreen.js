@@ -5,6 +5,50 @@ import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Video } from 'expo-av';
 import { API_BASE_URL } from '../services/api';
+import { getCurrentLocation } from '../services/locationService';
+
+/**
+ * Save detection result to backend database
+ */
+async function savePotholeDetection(detectionResult, latitude, longitude, isVideo = false) {
+  try {
+    if (!latitude || !longitude) {
+      console.warn('⚠️ Location not available, skipping database save');
+      return false;
+    }
+
+    const potholeData = {
+      image: detectionResult.image || detectionResult.videoUrl || '',
+      location: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      latitude: latitude,
+      longitude: longitude,
+      severity: detectionResult.severity || 'Unknown',
+      bbox: JSON.stringify(detectionResult.detections || []),
+      timestamp: Date.now(),
+    };
+
+    console.log('💾 Saving ' + (isVideo ? 'video' : 'image') + ' detection to database...');
+    const response = await fetch(`${API_BASE_URL}/potholes`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(potholeData),
+    });
+
+    if (response.ok) {
+      const saved = await response.json();
+      console.log('✅ Detection saved to database:', saved.id);
+      return true;
+    } else {
+      console.warn('⚠️ Failed to save detection:', response.status);
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Error saving detection:', error.message);
+    return false;
+  }
+}
 
 export default function VideoDetectionScreen() {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -58,6 +102,10 @@ export default function VideoDetectionScreen() {
     setProcessedFrames([]);
 
     try {
+      // Get current device location
+      console.log('📍 Capturing device location...');
+      const location = await getCurrentLocation();
+
       const formData = new FormData();
       
       // For React Native, we need to handle file upload properly
@@ -67,6 +115,15 @@ export default function VideoDetectionScreen() {
         type: 'video/mp4',
         name: selectedVideo.filename || 'video.mp4',
       });
+
+      // Add location data to request
+      if (location) {
+        formData.append('latitude', location.latitude.toString());
+        formData.append('longitude', location.longitude.toString());
+        console.log(`📍 Sending location: ${location.latitude}, ${location.longitude}`);
+      } else {
+        console.warn('⚠️ Could not capture location, proceeding with video detection only');
+      }
 
       console.log('Video details:', {
         uri: selectedVideo.uri,
@@ -121,7 +178,14 @@ export default function VideoDetectionScreen() {
       }]);
 
       setIsLoading(false);
-      Alert.alert('Success', 'Video processing complete! Full processed video is ready.');
+      
+      // Save detection to database if location is available
+      if (location && data) {
+        console.log('💾 Saving video detection to database...');
+        await savePotholeDetection(data, location.latitude, location.longitude, true);
+      }
+      
+      Alert.alert('Success', `Video processing complete!\n📍 Location recorded`);
 
     } catch (err) {
       const errMsg = err.message || 'Video processing failed';

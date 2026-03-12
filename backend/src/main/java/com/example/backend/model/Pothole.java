@@ -10,8 +10,13 @@ public class Pothole {
     private String id;
     private String image;
     private String location;
+    private String area;
     private String severity;
     private String bbox;
+    private Double latitude;
+    private Double longitude;
+    private Long timestamp;
+    private Integer issues;
 
     public String getId() {
         return id;
@@ -51,5 +56,45 @@ public class Pothole {
 
     public void setBbox(String bbox) {
         this.bbox = bbox;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public Long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(Long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getArea() {
+        return area;
+    }
+
+    public void setArea(String area) {
+        this.area = area;
+    }
+
+    public Integer getIssues() {
+        return issues;
+    }
+
+    public void setIssues(Integer issues) {
+        this.issues = issues;
     }
 }
