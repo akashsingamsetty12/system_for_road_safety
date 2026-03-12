@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Road Pothole Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2.5em;
+        }
+        
+        .upload-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border: 2px dashed #667eea;
+        }
+        
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        input[type="file"] {
+            position: absolute;
+            left: -9999px;
+        }
+        
+        .file-label {
+            display: block;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            transition: background 0.3s;
+            margin-bottom: 15px;
+        }
+        
+        .file-label:hover {
+            background: #764ba2;
+        }
+        
+        .file-name {
+            display: block;
+            color: #666;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px 30px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #218838;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results-section {
+            display: none;
+            margin-top: 40px;
+            border-top: 2px solid #eee;
+            padding-top: 30px;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        .image-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .image-container img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .detection-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .detection-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .detections-list {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .detection-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        
+        .detection-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .detection-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detection-details {
+            flex: 1;
+        }
+        
+        .detection-class {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .detection-coords {
+            font-size: 0.85em;
+            color: #666;
+            font-family: monospace;
+        }
+        
+        .detection-confidence {
+            background: #667eea;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            white-space: nowrap;
+            margin-left: 15px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error.active {
+            display: block;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛣️ Road Pothole Detection</h1>
+        
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="imageInput" accept="image/*" required>
+                <label for="imageInput" class="file-label">
+                    📸 Choose Image or Drag & Drop
+                </label>
+                <span id="fileName" class="file-name">No file selected</span>
+            </div>
+            <button id="detectBtn" disabled>Detect Potholes</button>
+        </div>
+        
+        <div class="error" id="errorMsg"></div>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Processing image... Please wait</p>
+        </div>
+        
+        <div class="results-section" id="results">
+            <div class="image-container">
+                <img id="resultImage" src="" alt="Detection Result">
+            </div>
+            
+            <div class="detection-info">
+                <div class="detection-stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Potholes Detected</div>
+                        <div class="stat-value" id="totalDetections">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Image Width</div>
+                        <div class="stat-value" id="imageWidth">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">Image Height</div>
+                        <div class="stat-value" id="imageHeight">0</div>
+                    </div>
+                </div>
+                
+                <h2>Detection Details</h2>
+                <div class="detections-list" id="detectionsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById('imageInput');
+        const detectBtn = document.getElementById('detectBtn');
+        const fileName = document.getElementById('fileName');
+        const loading = document.getElementById('loading');
+        const errorMsg = document.getElementById('errorMsg');
+        const resultsSection = document.getElementById('results');
+
+        // Enable/disable detect button
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileName.textContent = `Selected: ${e.target.files[0].name}`;
+                detectBtn.disabled = false;
+                errorMsg.classList.remove('active');
+            }
+        });
+
+        // Drag and drop
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (e.dataTransfer.files.length > 0) {
+                imageInput.files = e.dataTransfer.files;
+                fileName.textContent = `Selected: ${e.dataTransfer.files[0].name}`;
+                detectBtn.disabled = false;
+                errorMsg.classList.remove('active');
+            }
+        });
+
+        // Detect potholes
+        detectBtn.addEventListener('click', async () => {
+            const file = imageInput.files[0];
+            if (!file) {
+                showError('Please select an image first');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            loading.classList.add('active');
+            errorMsg.classList.remove('active');
+            resultsSection.classList.remove('active');
+
+            try {
+                const response = await fetch('/potholes/detect', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                showError(`Error detecting potholes: ${error.message}`);
+            } finally {
+                loading.classList.remove('active');
+            }
+        });
+
+        function displayResults(data) {
+            // Display image
+            document.getElementById('resultImage').src = `data:image/jpeg;base64,${data.image}`;
+
+            // Update stats
+            document.getElementById('totalDetections').textContent = data.count;
+            document.getElementById('imageWidth').textContent = data.width;
+            document.getElementById('imageHeight').textContent = data.height;
+
+            // Display detections
+            const detectionsList = document.getElementById('detectionsList');
+            detectionsList.innerHTML = '';
+
+            if (data.detections.length === 0) {
+                detectionsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No potholes detected</div>';
+            } else {
+                data.detections.forEach((detection, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'detection-item';
+                    item.innerHTML = `
+                        <div class="detection-details">
+                            <div class="detection-class">Pothole #${index + 1}</div>
+                            <div class="detection-coords">
+                                Position: (${detection.x1}, ${detection.y1}) → (${detection.x2}, ${detection.y2})
+                            </div>
+                        </div>
+                        <div class="detection-confidence">${(detection.confidence * 100).toFixed(1)}%</div>
+                    `;
+                    detectionsList.appendChild(item);
+                });
+            }
+
+            resultsSection.classList.add('active');
+        }
+
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.add('active');
+        }
+    </script>
+</body>
+</html>

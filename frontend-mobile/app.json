@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Road Detection",
+    "slug": "road-detection",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "primaryColor": "#667eea",
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.example.roaddetection"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#667eea"
+      },
+      "package": "com.example.roaddetection",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-camera"
+      ],
+      [
+        "expo-image-picker"
+      ]
+    ]
+  }
+}
