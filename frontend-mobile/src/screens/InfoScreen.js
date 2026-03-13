@@ -38,10 +38,12 @@ export default function HistoryScreen() {
 
         {/* Detection Classes */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🎯 Detection Classes</Text>
+          <Text style={styles.sectionTitle}>Detection Classes</Text>
 
           <View style={styles.classCard}>
-            <Text style={styles.classEmoji}>🕳️</Text>
+            <View style={styles.classIconContainer}>
+              <Text style={[styles.classIcon, { color: '#ef4444' }]}>!</Text>
+            </View>
             <View style={styles.classDetails}>
               <Text style={styles.className}>Pothole</Text>
               <Text style={styles.classDesc}>Damaged road surface with holes or cracks</Text>
@@ -49,7 +51,9 @@ export default function HistoryScreen() {
           </View>
 
           <View style={styles.classCard}>
-            <Text style={styles.classEmoji}>♻️</Text>
+            <View style={styles.classIconContainer}>
+              <Text style={[styles.classIcon, { color: '#f59e0b' }]}>~</Text>
+            </View>
             <View style={styles.classDetails}>
               <Text style={styles.className}>Plastic</Text>
               <Text style={styles.classDesc}>Plastic waste and bottles on road</Text>
@@ -57,7 +61,9 @@ export default function HistoryScreen() {
           </View>
 
           <View style={styles.classCard}>
-            <Text style={styles.classEmoji}>🗑️</Text>
+            <View style={styles.classIconContainer}>
+              <Text style={[styles.classIcon, { color: '#eab308' }]}>*</Text>
+            </View>
             <View style={styles.classDetails}>
               <Text style={styles.className}>Other Litter</Text>
               <Text style={styles.classDesc}>General garbage, debris, and waste</Text>
@@ -67,34 +73,46 @@ export default function HistoryScreen() {
 
         {/* Features */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>✨ Features</Text>
+          <Text style={styles.sectionTitle}>Features</Text>
           <View style={styles.featureItem}>
-            <Text style={styles.featureBullet}>📷</Text>
+            <View style={styles.featureBulletContainer}>
+              <Text style={styles.featureBullet}>📷</Text>
+            </View>
             <Text style={styles.featureText}>Take photos directly from camera</Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={styles.featureBullet}>🖼️</Text>
+            <View style={styles.featureBulletContainer}>
+              <Text style={styles.featureBullet}>🖼️</Text>
+            </View>
             <Text style={styles.featureText}>Upload images from gallery</Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={styles.featureBullet}>🔍</Text>
+            <View style={styles.featureBulletContainer}>
+              <Text style={styles.featureBullet}>🔍</Text>
+            </View>
             <Text style={styles.featureText}>Real-time object detection</Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={styles.featureBullet}>📊</Text>
+            <View style={styles.featureBulletContainer}>
+              <Text style={styles.featureBullet}>📊</Text>
+            </View>
             <Text style={styles.featureText}>Detailed detection statistics</Text>
           </View>
           <View style={styles.featureItem}>
-            <Text style={styles.featureBullet}>⚡</Text>
+            <View style={styles.featureBulletContainer}>
+              <Text style={styles.featureBullet}>⚡</Text>
+            </View>
             <Text style={styles.featureText}>Confidence scores for each detection</Text>
           </View>
         </View>
 
         {/* How to Use */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📝 How to Use</Text>
+          <Text style={styles.sectionTitle}>How to Use</Text>
           <View style={styles.stepCard}>
-            <Text style={styles.stepNumber}>1</Text>
+            <View style={styles.stepNumberContainer}>
+              <Text style={styles.stepNumber}>1</Text>
+            </View>
             <Text style={styles.stepText}>Take a photo or select from gallery</Text>
           </View>
           <View style={styles.stepCard}>
@@ -257,9 +275,18 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'center',
   },
-  classEmoji: {
-    fontSize: 30,
+  classIconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    backgroundColor: '#f0f0f5',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
+  },
+  classIcon: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   classDetails: {
     flex: 1,
@@ -282,13 +309,22 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
-  featureBullet: {
-    fontSize: 18,
+  featureBulletContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#f0f0f5',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
+  },
+  featureBullet: {
+    fontSize: 16,
   },
   featureText: {
     fontSize: 13,
     color: '#666',
+    flex: 1,
   },
   stepCard: {
     flexDirection: 'row',
@@ -300,11 +336,19 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: '#667eea',
   },
+  stepNumberContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#667eea',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
   stepNumber: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#667eea',
-    width: 30,
+    color: '#fff',
   },
   stepText: {
     fontSize: 13,

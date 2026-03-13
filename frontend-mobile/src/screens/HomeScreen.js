@@ -2,142 +2,198 @@ import React from 'react';
 import { ScrollView, View, StyleSheet, Dimensions } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { lightTheme, spacing, typography, borderRadius } from '../config/theme';
+
+const screenWidth = Dimensions.get('window').width;
 
 export default function HomeScreen({ navigation }) {
   const features = [
-    { icon: 'image', title: 'Image Detection', desc: 'Capture or upload photos' },
-    { icon: 'video', title: 'Video Detection', desc: 'Analyze video files' },
-    { icon: 'movie', title: 'Live Detection', desc: 'Real-time video stream' },
-    { icon: 'map-marker', title: 'Location Tracking', desc: 'GPS-based detection' },
+    { icon: 'image-multiple', title: 'Image Detection', desc: 'Capture or upload photos for analysis' },
+    { icon: 'video', title: 'Video Detection', desc: 'Process video files for detection' },
+    { icon: 'play-circle', title: 'Live Detection', desc: 'Real-time video stream analysis' },
+    { icon: 'map-marker-radius', title: 'Location Tracking', desc: 'GPS-based detection mapping' },
+  ];
+
+  const stats = [
+    { icon: 'check-circle-outline', title: 'Detections', value: '1,845' },
+    { icon: 'map-outline', title: 'Coverage', value: '12 km²' },
+    { icon: 'account-multiple', title: 'Users', value: '342' },
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <MaterialCommunityIcons name="road" size={60} color="#fff" />
-        <Title style={styles.headerTitle}>Road Detection System</Title>
-        <Paragraph style={styles.headerSubtitle}>
-          Detect potholes, litter, and road damage with AI
-        </Paragraph>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Hero Header */}
+      <View style={styles.heroHeader}>
+        <View style={styles.heroContent}>
+          <MaterialCommunityIcons name="road-variant" size={48} color={lightTheme.primary} />
+          <Title style={styles.heroTitle}>Road Detection</Title>
+          <Paragraph style={styles.heroSubtitle}>
+            Intelligent AI-powered road damage detection system
+          </Paragraph>
+        </View>
       </View>
 
-      {/* Quick Start */}
-      <View style={styles.section}>
-        <Title style={styles.sectionTitle}>🚀 Quick Start (4 Steps)</Title>
-        <Card style={styles.quickStartCard}>
-          <Card.Content>
-            <QuickStartItem number="1" text="Choose detection method" icon="image-multiple" />
-            <QuickStartItem number="2" text="Capture or upload media" icon="upload" />
-            <QuickStartItem number="3" text="View instant AI results" icon="lightbulb" />
-            <QuickStartItem number="4" text="Share to help your community" icon="share-variant" />
-          </Card.Content>
-        </Card>
+      {/* Quick Actions */}
+      <View style={styles.quickActionsSection}>
+        <Title style={styles.sectionTitle}>Get Started</Title>
+        <View style={styles.quickActionsGrid}>
+          <QuickActionCard 
+            icon="camera"
+            label="Capture"
+            color={lightTheme.primary}
+            onPress={() => navigation.getParent()?.navigate('Image')}
+          />
+          <QuickActionCard 
+            icon="folder-open"
+            label="Upload"
+            color={lightTheme.secondary}
+            onPress={() => navigation.getParent()?.navigate('Image')}
+          />
+          <QuickActionCard 
+            icon="video-box"
+            label="Video"
+            color={lightTheme.success}
+            onPress={() => navigation.getParent()?.navigate('Video')}
+          />
+          <QuickActionCard 
+            icon="map-marker"
+            label="Live"
+            color={lightTheme.warning}
+            onPress={() => navigation.getParent()?.navigate('Live')}
+          />
+        </View>
       </View>
 
-      {/* Features */}
-      <View style={styles.section}>
-        <Title style={styles.sectionTitle}>Key Features</Title>
+      {/* Features List */}
+      <View style={styles.featuresSection}>
+        <Title style={styles.sectionTitle}>Core Features</Title>
         {features.map((feature, index) => (
-          <Card key={index} style={styles.featureCard}>
-            <Card.Content style={styles.featureContent}>
-              <View style={styles.featureIcon}>
-                <MaterialCommunityIcons name={feature.icon} size={32} color="#667eea" />
-              </View>
-              <View style={styles.featureText}>
-                <Title style={styles.featureTitle}>{feature.title}</Title>
-                <Paragraph style={styles.featureDesc}>{feature.desc}</Paragraph>
-              </View>
-            </Card.Content>
-          </Card>
+          <FeatureCard key={index} {...feature} />
         ))}
+
       </View>
 
       {/* Detection Classes */}
-      <View style={styles.section}>
-        <Title style={styles.sectionTitle}>Detectable Objects</Title>
-        <View style={styles.chipsContainer}>
-          <Chip icon="pot-mix" style={styles.chip}>Pothole</Chip>
-          <Chip icon="leaf" style={styles.chip}>Plastic</Chip>
-          <Chip icon="trash-can" style={styles.chip}>Litter</Chip>
+      <View style={styles.classesSection}>
+        <Title style={styles.sectionTitle}>What Can We Detect</Title>
+        <View style={styles.classesGrid}>
+          <ClassChip label="Road Damage" icon="alert-circle" color={lightTheme.danger} />
+          <ClassChip label="Water" icon="water" color={lightTheme.info} />
+          <ClassChip label="Debris" icon="alert" color={lightTheme.warning} />
         </View>
       </View>
 
       {/* Statistics */}
-      <View style={styles.statsContainer}>
-        <StatCard title="Detections" value="1,845" icon="check-circle" />
-        <StatCard title="Coverage" value="12 km²" icon="map-outline" />
-        <StatCard title="Active Users" value="342" icon="account-multiple" />
+      <View style={styles.statsSection}>
+        <Title style={styles.sectionTitle}>System Statistics</Title>
+        <View style={styles.statsGrid}>
+          {stats.map((stat, index) => (
+            <StatCard key={index} {...stat} />
+          ))}
+        </View>
       </View>
 
-      {/* Info Buttons */}
-      <View style={styles.actionButtons}>
-        <Button
-          mode="outlined"
-          onPress={() => navigation.navigate('About')}
-          style={styles.button}
-        >
-          📖 About App
-        </Button>
-        <Button
-          mode="outlined"
-          onPress={() => navigation.navigate('Rewards')}
-          style={styles.button}
-        >
-          🎁 Rewards
-        </Button>
-      </View>
-
-      {/* Admin Button */}
-      <View style={styles.adminButtonContainer}>
+      {/* Action Buttons */}
+      <View style={styles.actionButtonsSection}>
         <Button
           mode="contained"
-          onPress={() => navigation.navigate('AdminLogin')}
-          style={styles.adminButton}
-          buttonColor="#667eea"
-          icon="lock"
+          onPress={() => navigation.getParent()?.navigate('Image')}
+          style={styles.primaryButton}
+          buttonColor={lightTheme.primary}
+          labelStyle={styles.buttonLabel}
+          icon="play-circle"
         >
-          🔐 Admin Portal
+          START DETECTION
+        </Button>
+      </View>
+
+      {/* Secondary Links */}
+      <View style={styles.secondaryLinksSection}>
+        <Button
+          mode="text"
+          onPress={() => navigation.navigate('About')}
+          style={styles.textButton}
+          labelStyle={{ color: lightTheme.primary }}
+        >
+          About Application
+        </Button>
+        <Button
+          mode="text"
+          onPress={() => navigation.navigate('Rewards')}
+          style={styles.textButton}
+          labelStyle={{ color: lightTheme.primary }}
+        >
+          Rewards Program
+        </Button>
+      </View>
+
+      {/* Admin Portal */}
+      <View style={styles.adminSection}>
+        <Button
+          mode="outlined"
+          onPress={() => navigation.navigate('AdminDashboard')}
+          style={styles.adminButton}
+          labelStyle={{ color: lightTheme.primary }}
+          icon="security"
+        >
+          ADMIN PORTAL
         </Button>
       </View>
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Paragraph style={styles.footerText}>
-          Privacy Policy • Terms of Service • Help
-        </Paragraph>
-        <Paragraph style={styles.footerVersion}>
-          Version 1.0.0
-        </Paragraph>
+        <Paragraph style={styles.footerText}>Version 1.0 • Developed with Can't Win</Paragraph>
       </View>
     </ScrollView>
   );
 }
 
-function StatCard({ title, value, icon }) {
+function QuickActionCard({ icon, label, color, onPress }) {
   return (
-    <Card style={styles.statCard}>
-      <Card.Content style={styles.statContent}>
-        <View style={styles.statIcon}>
-          <MaterialCommunityIcons name={icon} size={24} color="#667eea" />
-        </View>
-        <View>
-          <Paragraph style={styles.statTitle}>{title}</Paragraph>
-          <Title style={styles.statValue}>{value}</Title>
-        </View>
-      </Card.Content>
-    </Card>
+    <Button
+      mode="outlined"
+      onPress={onPress}
+      style={[styles.quickActionCard, { borderColor: color }]}
+      labelStyle={{ color, fontSize: 11, fontWeight: '600' }}
+      icon={icon}
+    >
+      {label}
+    </Button>
   );
 }
 
-function QuickStartItem({ number, text, icon }) {
+function FeatureCard({ icon, title, desc }) {
   return (
-    <View style={styles.quickStartItem}>
-      <View style={styles.quickStartNumber}>
-        <Paragraph style={styles.quickStartNumberText}>{number}</Paragraph>
+    <View style={styles.featureCard}>
+      <View style={styles.featureIconContainer}>
+        <MaterialCommunityIcons name={icon} size={24} color={lightTheme.primary} />
       </View>
-      <MaterialCommunityIcons name={icon} size={24} color="#667eea" style={styles.quickStartIcon} />
-      <Paragraph style={styles.quickStartText}>{text}</Paragraph>
+      <View style={styles.featureContent}>
+        <Title style={styles.featureTitle}>{title}</Title>
+        <Paragraph style={styles.featureDesc}>{desc}</Paragraph>
+      </View>
+      <MaterialCommunityIcons name="chevron-right" size={20} color={lightTheme.border} />
+    </View>
+  );
+}
+
+function ClassChip({ label, icon, color }) {
+  return (
+    <View style={[styles.classChip, { borderColor: color }]}>
+      <MaterialCommunityIcons name={icon} size={16} color={color} />
+      <Paragraph style={[styles.classChipLabel, { color }]}>{label}</Paragraph>
+    </View>
+  );
+}
+
+function StatCard({ icon, title, value }) {
+  return (
+    <View style={styles.statCard}>
+      <View style={styles.statIconContainer}>
+        <MaterialCommunityIcons name={icon} size={20} color={lightTheme.primary} />
+      </View>
+      <Paragraph style={styles.statLabel}>{title}</Paragraph>
+      <Title style={styles.statValue}>{value}</Title>
     </View>
   );
 }
@@ -145,166 +201,205 @@ function QuickStartItem({ number, text, icon }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: lightTheme.background,
   },
-  header: {
-    backgroundColor: '#667eea',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
+  
+  // Hero Header
+  heroHeader: {
+    backgroundColor: lightTheme.surface,
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: lightTheme.border,
+  },
+  heroContent: {
     alignItems: 'center',
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    gap: spacing.md,
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: 10,
+  heroTitle: {
+    fontSize: typography.h2.fontSize,
+    fontWeight: typography.h2.fontWeight,
+    color: lightTheme.text.primary,
+    textAlign: 'center',
   },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 8,
-    fontSize: 14,
+  heroSubtitle: {
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+    maxWidth: 300,
   },
-  section: {
-    paddingHorizontal: 16,
-    marginTop: 24,
+
+  // Quick Actions
+  quickActionsSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 12,
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  quickActionCard: {
+    width: '48%',
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+  },
+
+  // Features Section
+  featuresSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
   },
   featureCard: {
-    marginBottom: 12,
-    elevation: 2,
-  },
-  featureContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    backgroundColor: lightTheme.surface,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
   },
-  featureIcon: {
-    marginRight: 16,
+  featureIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: `${lightTheme.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  featureText: {
+  featureContent: {
     flex: 1,
   },
   featureTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.h6.fontSize,
+    fontWeight: typography.h6.fontWeight,
+    color: lightTheme.text.primary,
   },
   featureDesc: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: 2,
   },
-  chipsContainer: {
+
+  // Classes Section
+  classesSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: lightTheme.surface,
+  },
+  classesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.md,
   },
-  chip: {
-    backgroundColor: '#eef2ff',
-    marginBottom: 8,
+  classChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    gap: spacing.sm,
   },
-  statsContainer: {
-    paddingHorizontal: 16,
-    marginVertical: 24,
+  classChipLabel: {
+    fontSize: typography.small.fontSize,
+    fontWeight: typography.smallMedium.fontWeight,
+  },
+
+  // Stats Section
+  statsSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    justifyContent: 'space-between',
   },
   statCard: {
-    marginBottom: 12,
-    elevation: 2,
-  },
-  statContent: {
-    flexDirection: 'row',
+    flex: 1,
+    backgroundColor: lightTheme.surface,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
+    gap: spacing.sm,
   },
-  statIcon: {
-    marginRight: 16,
-  },
-  statTitle: {
-    fontSize: 13,
-    color: '#999',
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#667eea',
-  },
-  actionButtons: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-    gap: 10,
-  },
-  button: {
-    borderColor: '#667eea',
-    paddingVertical: 6,
-  },
-  adminButtonContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 24,
-  },
-  adminButton: {
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    marginTop: 20,
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#999',
-    textAlign: 'center',
-  },
-  footerVersion: {
-    fontSize: 12,
-    color: '#ccc',
-    marginTop: 8,
-  },
-  quickStartCard: {
-    marginBottom: 16,
-    elevation: 2,
-    backgroundColor: '#f0f4ff',
-  },
-  quickStartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e7ff',
-  },
-  quickStartNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#667eea',
+  statIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: `${lightTheme.primary}20`,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
-  quickStartNumberText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 14,
+  statLabel: {
+    fontSize: typography.caption.fontSize,
+    color: lightTheme.text.secondary,
   },
-  quickStartIcon: {
-    marginRight: 12,
-    color: '#667eea',
+  statValue: {
+    fontSize: typography.h5.fontSize,
+    fontWeight: typography.h5.fontWeight,
+    color: lightTheme.text.primary,
   },
-  quickStartText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#333',
-    fontWeight: '500',
+
+  // Action Buttons
+  actionButtonsSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+    gap: spacing.md,
+  },
+  primaryButton: {
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.sm,
+  },
+  buttonLabel: {
+    fontSize: typography.bodyMedium.fontSize,
+    fontWeight: typography.bodyMedium.fontWeight,
+  },
+
+  // Secondary Links
+  secondaryLinksSection: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  textButton: {
+    borderRadius: borderRadius.md,
+  },
+
+  // Admin Section
+  adminSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: lightTheme.surface,
+  },
+  adminButton: {
+    borderRadius: borderRadius.lg,
+    borderColor: lightTheme.primary,
+    borderWidth: 1.5,
+  },
+
+  // Section Title
+  sectionTitle: {
+    fontSize: typography.h4.fontSize,
+    fontWeight: typography.h4.fontWeight,
+    color: lightTheme.text.primary,
+    marginBottom: spacing.md,
+  },
+
+  // Footer
+  footer: {
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: lightTheme.border,
+  },
+  footerText: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.tertiary,
   },
 });

@@ -38,12 +38,12 @@ export default function AboutScreen({ navigation }) {
         <Title style={styles.sectionTitle}>✨ Key Features</Title>
 
         <FeatureItem
-          icon="image-check"
+          icon="image-search"
           title="Image Detection"
           desc="Analyze photographs for road damage"
         />
         <FeatureItem
-          icon="video-check"
+          icon="film"
           title="Video Analysis"
           desc="Process video files for damage detection"
         />

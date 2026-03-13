@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, ScrollView, StyleSheet, Image, Alert } from 'react-native';
-import { Button, Card, Title, Paragraph, ActivityIndicator, SegmentedButtons, Chip } from 'react-native-paper';
+import { View, ScrollView, StyleSheet, Image, Alert, Dimensions } from 'react-native';
+import { Button, Card, Title, Paragraph, ActivityIndicator, Chip } from 'react-native-paper';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../services/api';
 import { getCurrentLocation } from '../services/locationService';
+import { lightTheme, spacing, typography, borderRadius } from '../config/theme';
 
 const getConfidenceColor = (confidence) => {
   if (!confidence) return '#ccc';
@@ -79,14 +81,14 @@ export default function ImageDetectionScreen() {
 
   const handleDetect = async () => {
     if (!selectedImage) {
-      Alert.alert('⚠️ No Image Selected', 'Please capture or upload a photo first', [{ text: 'OK' }]);
+      Alert.alert('No Image Selected', 'Please capture or upload a photo first', [{ text: 'OK' }]);
       return;
     }
 
     setIsLoading(true);
     const timeoutId = setTimeout(() => {
       setIsLoading(false);
-      Alert.alert('⏱️ Detection Timeout', `The backend server is taking too long to respond.\n\nBackend: ${API_BASE_URL}\n\nMake sure:\n• Backend server is running\n• Device has internet connection\n• API URL is correct`, [{ text: 'OK' }]);
+      Alert.alert('Detection Timeout', `The backend server is taking too long to respond.\n\nBackend: ${API_BASE_URL}\n\nMake sure:\n• Backend server is running\n• Device has internet connection\n• API URL is correct`, [{ text: 'OK' }]);
     }, 30000);
 
     try {
@@ -116,7 +118,7 @@ export default function ImageDetectionScreen() {
       Alert.alert('Detection Complete', `Found ${data.count || 0} object(s)`, [{ text: 'OK' }], { cancelable: false });
     } catch (err) {
       clearTimeout(timeoutId);
-      Alert.alert('❌ Detection Failed', err.message || 'Unknown error occurred. Try again.', [{ text: 'OK' }]);
+      Alert.alert('Detection Failed', err.message || 'Unknown error occurred. Try again.', [{ text: 'OK' }]);
     } finally {
       setIsLoading(false);
     }
@@ -128,47 +130,71 @@ export default function ImageDetectionScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Title style={styles.headerTitle}>📷 Image Detection</Title>
-        <Paragraph style={styles.headerDesc}>
-          Detect road damage, potholes, and litter in seconds
-        </Paragraph>
-        <View style={styles.stepIndicator}>
-          <Chip style={styles.activeStep}>1️⃣ Capture</Chip>
-          <Paragraph style={styles.arrow}>→</Paragraph>
-          <Chip>2️⃣ Analyze</Chip>
-          <Paragraph style={styles.arrow}>→</Paragraph>
-          <Chip>3️⃣ View Results</Chip>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Hero Header */}
+      <View style={styles.heroHeader}>
+        <View style={styles.heroContent}>
+          <MaterialCommunityIcons name="image-search" size={48} color={lightTheme.primary} />
+          <Title style={styles.heroTitle}>Image Detection</Title>
+          <Paragraph style={styles.heroSubtitle}>
+            Capture or upload photos to detect road damage
+          </Paragraph>
         </View>
       </View>
 
-      {/* Image Preview */}
-      <Card style={styles.imageCard}>
-        {selectedImage ? (
-          <Image source={{ uri: selectedImage }} style={styles.image} />
-        ) : (
-          <View style={styles.placeholder}>
-            <Paragraph style={styles.placeholderText}>No image selected</Paragraph>
-          </View>
-        )}
-      </Card>
+      {/* Image Preview Section */}
+      <View style={styles.previewSection}>
+        <View style={styles.previewHeader}>
+          <Paragraph style={styles.previewLabel}>Image Preview</Paragraph>
+          {selectedImage && (
+            <Button 
+              mode="text" 
+              compact 
+              onPress={handleReset}
+              labelStyle={{ color: lightTheme.danger }}
+            >
+              Clear
+            </Button>
+          )}
+        </View>
+        
+        <Card style={styles.imageCard}>
+          {selectedImage ? (
+            <Image source={{ uri: selectedImage }} style={styles.image} />
+          ) : (
+            <View style={styles.placeholder}>
+              <Title style={styles.placeholderTitle}>Ready to Detect</Title>
+              <Paragraph style={styles.placeholderText}>
+                Select an image from your camera or gallery to analyze for road damage
+              </Paragraph>
+              <View style={styles.placeholderDots}>
+                <View style={styles.dot} />
+                <View style={styles.dot} />
+                <View style={styles.dot} />
+              </View>
+            </View>
+          )}
+        </Card>
+      </View>
 
       {/* Action Buttons */}
-      <View style={styles.buttonGroup}>
+      <View style={styles.actionSection}>
         <Button
           mode="contained"
           onPress={takePhoto}
           icon="camera"
-          style={styles.halfButton}
+          style={styles.actionButton}
+          buttonColor={lightTheme.primary}
+          labelStyle={styles.buttonLabel}
         >
-          Camera
+          Capture Photo
         </Button>
         <Button
-          mode="contained"
+          mode="outlined"
           onPress={pickImage}
-          icon="image"
-          style={styles.halfButton}
+          icon="image-multiple"
+          style={styles.actionButton}
+          labelStyle={{ color: lightTheme.primary, fontSize: typography.body.fontSize, fontWeight: '600' }}
         >
           Gallery
         </Button>
@@ -176,36 +202,53 @@ export default function ImageDetectionScreen() {
 
       {/* Detect Button */}
       {selectedImage && !isLoading && (
-        <Button
-          mode="contained"
-          onPress={handleDetect}
-          icon="magnify"
-          style={styles.detectButton}
-          buttonColor="#10b981"
-        >
-          Detect
-        </Button>
-      )}
-
-      {/* Loading */}
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator animating={true} size="large" color="#667eea" />
-          <Paragraph style={styles.loadingText}>Analyzing image...</Paragraph>
+        <View style={styles.detectButtonSection}>
+          <Button
+            mode="contained"
+            onPress={handleDetect}
+            icon="play-circle"
+            style={styles.detectButton}
+            buttonColor={lightTheme.success}
+            labelStyle={styles.detectButtonLabel}
+          >
+            Analyze Image
+          </Button>
+          <Paragraph style={styles.analyzeHint}>AI will detect road damage in seconds</Paragraph>
         </View>
       )}
 
-      {/* Results */}
+      {/* Loading State */}
+      {isLoading && (
+        <Card style={styles.loadingCard}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator animating={true} size="large" color={lightTheme.primary} />
+            <Title style={styles.loadingTitle}>Analyzing Image</Title>
+            <Paragraph style={styles.loadingText}>Processing your image with AI...</Paragraph>
+          </View>
+        </Card>
+      )}
+
+      {/* Results Section */}
       {result && !isLoading && (
-        <>
+        <View style={styles.resultsSection}>
+          {/* Results Header */}
+          <View style={styles.resultsHeader}>
+            <View style={styles.resultsHeaderContent}>
+              <MaterialCommunityIcons name="check-circle" size={32} color={lightTheme.success} />
+              <View style={styles.resultsHeaderText}>
+                <Title style={styles.resultsTitle}>Detection Complete</Title>
+                <Paragraph style={styles.resultsSubtitle}>
+                  Found {result.count || 0} object(s) detected
+                </Paragraph>
+              </View>
+            </View>
+          </View>
+
           {result.image && (
             <>
               {/* Detected Image */}
               <Card style={styles.resultCard}>
-                <Card.Title 
-                  title="Detection Results" 
-                  subtitle={`${result.count || 0} object(s) detected`}
-                />
+                <Card.Title title="Detection Result" />
                 <Card.Content>
                   <Image 
                     source={{ uri: `data:image/jpeg;base64,${result.image}` }} 
@@ -215,25 +258,34 @@ export default function ImageDetectionScreen() {
               </Card>
 
               {/* Analysis Summary */}
-              <Card style={styles.analysisCard}>
+              <Card style={styles.summaryCard}>
                 <Card.Title title="Analysis Summary" />
                 <Card.Content>
                   <View style={styles.summaryGrid}>
                     <View style={styles.summaryItem}>
-                      <Paragraph style={styles.summaryLabel}>Total Objects</Paragraph>
+                      <View style={styles.summaryIconContainer}>
+                        <MaterialCommunityIcons name="cube-outline" size={24} color={lightTheme.primary} />
+                      </View>
+                      <Paragraph style={styles.summaryLabel}>Objects</Paragraph>
                       <Title style={styles.summaryValue}>{result.count || 0}</Title>
                     </View>
                     <View style={styles.summaryItem}>
-                      <Paragraph style={styles.summaryLabel}>Image Size</Paragraph>
-                      <Paragraph style={styles.summaryValue}>
+                      <View style={styles.summaryIconContainer}>
+                        <MaterialCommunityIcons name="image-size-select-actual" size={24} color={lightTheme.info} />
+                      </View>
+                      <Paragraph style={styles.summaryLabel}>Resolution</Paragraph>
+                      <Title style={styles.summaryValue}>
                         {result.width && result.height ? `${result.width}x${result.height}` : 'N/A'}
-                      </Paragraph>
+                      </Title>
                     </View>
                     <View style={styles.summaryItem}>
-                      <Paragraph style={styles.summaryLabel}>Processing</Paragraph>
-                      <Paragraph style={styles.summaryValue}>
-                        {result.time_taken ? `${result.time_taken}s` : 'Complete'}
-                      </Paragraph>
+                      <View style={styles.summaryIconContainer}>
+                        <MaterialCommunityIcons name="clock-fast" size={24} color={lightTheme.warning} />
+                      </View>
+                      <Paragraph style={styles.summaryLabel}>Time</Paragraph>
+                      <Title style={styles.summaryValue}>
+                        {result.processing_time_seconds ? `${result.processing_time_seconds}s` : 'Complete'}
+                      </Title>
                     </View>
                   </View>
                 </Card.Content>
@@ -242,13 +294,14 @@ export default function ImageDetectionScreen() {
               {/* Detection Details */}
               {result.detections && result.detections.length > 0 && (
                 <Card style={styles.detailsCard}>
-                  <Card.Title title="Detected Objects" />
+                  <Card.Title 
+                    title="Detected Objects" 
+                    subtitle={`${result.detections.length} item(s) found`}
+                  />
                   <Card.Content>
                     {result.detections.map((detection, idx) => {
                       const severity = getObjectSeverity(detection.confidence);
                       const confidencePercent = Math.round((detection.confidence || 0) * 100);
-                      
-                      // Calculate additional feature values
                       const boxWidth = detection.x2 - detection.x1;
                       const boxHeight = detection.y2 - detection.y1;
                       const area = Math.round(boxWidth * boxHeight);
@@ -258,21 +311,19 @@ export default function ImageDetectionScreen() {
                       const boxSizePercent = ((area / (result.width * result.height)) * 100).toFixed(2);
                       
                       return (
-                        <View key={idx} style={styles.detectionItemContainer}>
-                          {/* Severity Badge + Class Name + ID */}
+                        <View key={idx} style={styles.detectionContainer}>
                           <View style={styles.detectionHeader}>
                             <View style={[styles.severityBadge, { backgroundColor: severity.color }]}>
                               <Paragraph style={styles.severityText}>{severity.severity}</Paragraph>
                             </View>
-                            <View style={styles.classInfoColumn}>
-                              <Title style={styles.detectionClassName}>
+                            <View style={styles.detectionTitleSection}>
+                              <Title style={styles.detectionTitle}>
                                 {detection.class || `Object ${idx + 1}`}
                               </Title>
-                              <Paragraph style={styles.classIdText}>ID: {detection.class_id || idx}</Paragraph>
+                              <Paragraph style={styles.detectionSubtitle}>ID: {detection.class_id || idx}</Paragraph>
                             </View>
                           </View>
 
-                          {/* Confidence Score Section */}
                           <View style={styles.confidenceSection}>
                             <View style={styles.confidenceHeader}>
                               <Paragraph style={styles.confidenceLabel}>Confidence Score</Paragraph>
@@ -280,7 +331,7 @@ export default function ImageDetectionScreen() {
                                 {confidencePercent}%
                               </Paragraph>
                             </View>
-                            <View style={styles.confidenceBarContainer}>
+                            <View style={styles.confidenceBar}>
                               <View 
                                 style={[
                                   styles.confidenceBarFill, 
@@ -293,42 +344,18 @@ export default function ImageDetectionScreen() {
                             </View>
                           </View>
 
-                          {/* Feature Values Grid */}
                           <View style={styles.featureGrid}>
-                            {/* Bounding Box Coordinates */}
                             <View style={styles.featureCard}>
                               <Paragraph style={styles.featureLabel}>Bounding Box</Paragraph>
-                              <View style={styles.featureContent}>
-                                <Paragraph style={styles.featureValue}>↖️ ({Math.round(detection.x1)}, {Math.round(detection.y1)})</Paragraph>
-                                <Paragraph style={styles.featureValue}>↙️ ({Math.round(detection.x2)}, {Math.round(detection.y2)})</Paragraph>
-                              </View>
+                              <Paragraph style={styles.featureValue}>({Math.round(detection.x1)}, {Math.round(detection.y1)}) to ({Math.round(detection.x2)}, {Math.round(detection.y2)})</Paragraph>
                             </View>
-
-                            {/* Size Information */}
                             <View style={styles.featureCard}>
-                              <Paragraph style={styles.featureLabel}>Dimensions</Paragraph>
-                              <View style={styles.featureContent}>
-                                <Paragraph style={styles.featureValue}>Width: {Math.round(boxWidth)}px</Paragraph>
-                                <Paragraph style={styles.featureValue}>Height: {Math.round(boxHeight)}px</Paragraph>
-                              </View>
+                              <Paragraph style={styles.featureLabel}>Size</Paragraph>
+                              <Paragraph style={styles.featureValue}>{Math.round(boxWidth)}px × {Math.round(boxHeight)}px</Paragraph>
                             </View>
-
-                            {/* Area & Ratio */}
                             <View style={styles.featureCard}>
-                              <Paragraph style={styles.featureLabel}>Area Analysis</Paragraph>
-                              <View style={styles.featureContent}>
-                                <Paragraph style={styles.featureValue}>Area: {area} px²</Paragraph>
-                                <Paragraph style={styles.featureValue}>Ratio: {boxSizePercent}% of image</Paragraph>
-                              </View>
-                            </View>
-
-                            {/* Aspect Ratio & Center */}
-                            <View style={styles.featureCard}>
-                              <Paragraph style={styles.featureLabel}>Position Details</Paragraph>
-                              <View style={styles.featureContent}>
-                                <Paragraph style={styles.featureValue}>Aspect Ratio: {aspectRatio}:1</Paragraph>
-                                <Paragraph style={styles.featureValue}>Center: ({centerX}, {centerY})</Paragraph>
-                              </View>
+                              <Paragraph style={styles.featureLabel}>Coverage</Paragraph>
+                              <Paragraph style={styles.featureValue}>{boxSizePercent}% of image</Paragraph>
                             </View>
                           </View>
 
@@ -340,7 +367,7 @@ export default function ImageDetectionScreen() {
                 </Card>
               )}
 
-              {/* Object Classification Summary */}
+              {/* Classification Breakdown */}
               {result.detections && result.detections.length > 0 && (
                 <Card style={styles.classificationCard}>
                   <Card.Title title="Classification Breakdown" />
@@ -352,78 +379,107 @@ export default function ImageDetectionScreen() {
                       });
 
                       return Object.entries(classCount).map(([className, count], idx) => (
-                        <View key={idx} style={styles.classRow}>
-                          <View style={styles.classLabel}>
+                        <View key={idx} style={styles.classItemContainer}>
+                          <View style={styles.classItemContent}>
                             <View style={[
                               styles.classColorDot,
                               { backgroundColor: getSeverityColor(className) }
                             ]} />
-                            <Paragraph style={styles.className}>{className}</Paragraph>
+                            <Title style={styles.classItemName}>{className}</Title>
                           </View>
-                          <Chip style={styles.countChip}>{count} found</Chip>
+                          <Chip style={styles.classCountChip}>{count}</Chip>
                         </View>
                       ));
                     })()}
                   </Card.Content>
                 </Card>
               )}
+
+              {/* Action Buttons */}
+              <View style={styles.actionButtonsContainer}>
+                <Button
+                  mode="contained"
+                  onPress={handleReset}
+                  icon="refresh"
+                  style={styles.flexButton}
+                  buttonColor={lightTheme.primary}
+                  labelStyle={styles.buttonLabel}
+                >
+                  New Detection
+                </Button>
+                <Button
+                  mode="outlined"
+                  icon="share-variant"
+                  style={styles.flexButton}
+                  labelStyle={{ color: lightTheme.primary }}
+                  onPress={() => Alert.alert('Share', 'Share functionality coming soon')}
+                >
+                  Share
+                </Button>
+              </View>
             </>
           )}
-
-          <View style={styles.resultButtonGroup}>
-            <Button
-              mode="contained"
-              onPress={handleReset}
-              icon="refresh"
-              style={styles.flexButton}
-              buttonColor="#667eea"
-            >
-              New Detection
-            </Button>
-            <Button
-              mode="outlined"
-              icon="share-variant"
-              style={styles.flexButton}
-              onPress={() => Alert.alert('Share', 'Sharing detected image...')}
-            >
-              Share
-            </Button>
-          </View>
-        </>
+        </View>
       )}
     </ScrollView>
   );
 }
 
+const screenHeight = Dimensions.get('window').height;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: lightTheme.background,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
+
+  // Hero Header
+  heroHeader: {
+    backgroundColor: lightTheme.surface,
+    paddingVertical: spacing.xxxl,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: lightTheme.border,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+  heroContent: {
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  headerDesc: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
+  heroTitle: {
+    fontSize: typography.h2.fontSize,
+    fontWeight: typography.h2.fontWeight,
+    color: lightTheme.text.primary,
+  },
+  heroSubtitle: {
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+  },
+
+  // Preview Section
+  previewSection: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  previewLabel: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: typography.h6.fontWeight,
+    color: lightTheme.text.primary,
   },
   imageCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
     elevation: 2,
   },
   image: {
     width: '100%',
-    height: undefined,
-    aspectRatio: 1,
+    height: 300,
     resizeMode: 'contain',
   },
   placeholder: {
@@ -431,293 +487,328 @@ const styles = StyleSheet.create({
     height: 300,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f5',
+    backgroundColor: `${lightTheme.primary}08`,
+    gap: spacing.lg,
+    paddingHorizontal: spacing.lg,
+  },
+  placeholderTitle: {
+    fontSize: typography.h4.fontSize,
+    fontWeight: 'bold',
+    color: lightTheme.text.primary,
+    textAlign: 'center',
   },
   placeholderText: {
-    color: '#999',
-    fontSize: 14,
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+    lineHeight: 22,
   },
-  buttonGroup: {
+  placeholderSubText: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+  },
+  placeholderDots: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.sm,
+    justifyContent: 'center',
+    marginTop: spacing.md,
   },
-  halfButton: {
-    flex: 1,
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: lightTheme.primary,
+  },
+
+  // Action Buttons
+  actionSection: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  actionButton: {
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+  },
+  buttonLabel: {
+    fontSize: typography.body.fontSize,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+
+  // Detect Button
+  detectButtonSection: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   detectButton: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 6,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.md,
+  },
+  detectButtonLabel: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: 'bold',
+    letterSpacing: 0.3,
+  },
+  analyzeHint: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+
+  // Loading
+  loadingCard: {
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
   },
   loadingContainer: {
+    paddingVertical: spacing.xxxl,
     alignItems: 'center',
-    paddingVertical: 40,
+    gap: spacing.md,
+  },
+  loadingTitle: {
+    fontSize: typography.h5.fontSize,
+    fontWeight: '600',
+    color: lightTheme.text.primary,
   },
   loadingText: {
-    marginTop: 12,
-    color: '#667eea',
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
   },
+
+  // Results Section
+  resultsSection: {
+    flex: 1,
+  },
+  resultsHeader: {
+    backgroundColor: `${lightTheme.success}12`,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderLeftWidth: 5,
+    borderLeftColor: lightTheme.success,
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  resultsHeaderContent: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    alignItems: 'flex-start',
+    flex: 1,
+  },
+  resultsHeaderText: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  resultsTitle: {
+    fontSize: typography.h5.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+  },
+  resultsSubtitle: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+  },
+
+  // Result Card
   resultCard: {
-    marginHorizontal: 16,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.lg,
     elevation: 3,
+    backgroundColor: lightTheme.surface,
   },
-  detailsContainer: {
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+  resultImage: {
+    width: '100%',
+    height: 300,
+    resizeMode: 'contain',
   },
-  detailsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 12,
-    color: '#333',
-  },
-  detectionItem: {
-    marginBottom: 12,
-  },
-  detectionNameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  detectionName: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#333',
-    flex: 1,
-  },
-  confidenceText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#667eea',
-  },
-  confidenceBar: {
-    height: 6,
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  resultButtonGroup: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 20,
-  },
-  flexButton: {
-    flex: 1,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    gap: 4,
-  },
-  activeStep: {
-    backgroundColor: '#667eea',
-  },
-  arrow: {
-    color: '#999',
-    fontSize: 12,
-    marginHorizontal: 2,
-  },
-  resultCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  analysisCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  detailsCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  classificationCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
+
+  // Summary Card
+  summaryCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.lg,
+    elevation: 3,
+    backgroundColor: lightTheme.surface,
   },
   summaryGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginVertical: 8,
+    gap: spacing.lg,
   },
   summaryItem: {
     alignItems: 'center',
-    paddingHorizontal: 12,
+    flex: 1,
+    gap: spacing.sm,
+  },
+  summaryIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.md,
+    backgroundColor: `${lightTheme.primary}12`,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: typography.caption.fontSize,
+    color: lightTheme.text.secondary,
+    fontWeight: '500',
   },
   summaryValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: typography.h5.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
   },
-  resultImage: {
-    width: '100%',
-    height: undefined,
-    aspectRatio: 1,
-    resizeMode: 'contain',
-    marginVertical: 8,
+
+  // Details Card
+  detailsCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.lg,
+    elevation: 3,
+    backgroundColor: lightTheme.surface,
   },
-  detectionItemContainer: {
-    paddingVertical: 12,
+  detectionContainer: {
+    paddingVertical: spacing.lg,
   },
   detectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 12,
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   severityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.sm,
   },
   severityText: {
-    fontSize: 11,
+    fontSize: typography.caption.fontSize,
     fontWeight: 'bold',
     color: '#fff',
   },
-  detectionClassName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+  detectionTitleSection: {
     flex: 1,
+    gap: spacing.xs,
+  },
+  detectionTitle: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+  },
+  detectionSubtitle: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
   },
   confidenceSection: {
-    marginBottom: 12,
+    marginBottom: spacing.lg,
   },
   confidenceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: spacing.md,
+    alignItems: 'center',
   },
   confidenceLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    fontWeight: '500',
   },
   confidencePercent: {
-    fontSize: 13,
+    fontSize: typography.h6.fontSize,
     fontWeight: 'bold',
   },
-  confidenceBarContainer: {
-    height: 8,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 4,
+  confidenceBar: {
+    height: 10,
+    backgroundColor: `${lightTheme.border}40`,
+    borderRadius: borderRadius.sm,
     overflow: 'hidden',
   },
   confidenceBarFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: borderRadius.sm,
   },
-  bboxInfo: {
-    backgroundColor: '#f0f0f5',
-    padding: 8,
-    borderRadius: 6,
-    marginBottom: 8,
+  featureGrid: {
+    gap: spacing.lg,
   },
-  bboxText: {
-    fontSize: 11,
-    color: '#666',
-    marginBottom: 2,
+  featureCard: {
+    backgroundColor: `${lightTheme.primary}08`,
+    borderLeftWidth: 4,
+    borderLeftColor: lightTheme.primary,
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.md,
+  },
+  featureLabel: {
+    fontSize: typography.caption.fontSize,
+    fontWeight: '700',
+    color: lightTheme.primary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.sm,
+    letterSpacing: 0.5,
+  },
+  featureValue: {
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.primary,
+    fontWeight: '600',
+    lineHeight: 20,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 8,
+    backgroundColor: lightTheme.border,
+    marginVertical: spacing.lg,
   },
-  classRow: {
+
+  // Classification Card
+  classificationCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.lg,
+    elevation: 2,
+  },
+  classItemContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: lightTheme.border,
   },
-  classLabel: {
+  classItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    flex: 1,
+    gap: spacing.md,
   },
   classColorDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
   },
-  className: {
-    fontSize: 13,
+  classItemName: {
+    fontSize: typography.body.fontSize,
     fontWeight: '500',
-    color: '#333',
+    color: lightTheme.text.primary,
   },
-  countChip: {
-    fontSize: 11,
+  classCountChip: {
+    fontSize: typography.caption.fontSize,
   },
-  detectionItem: {
+
+  // Action Buttons Container
+  actionButtonsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.xxl,
+    gap: spacing.md,
   },
-  detectionClass: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-  },
-  detectionConfidence: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#10b981',
-  },
-  resetButton: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderColor: '#ef4444',
-  },
-  featureGrid: {
-    gap: 10,
-  },
-  featureCard: {
-    backgroundColor: '#f8f9fa',
-    borderLeftWidth: 4,
-    borderLeftColor: '#667eea',
-    padding: 12,
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  featureLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#667eea',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  featureContent: {
-    gap: 4,
-  },
-  featureValue: {
-    fontSize: 12,
-    color: '#333',
-    fontWeight: '500',
-    lineHeight: 18,
-  },
-  classInfoColumn: {
+  flexButton: {
     flex: 1,
-  },
-  classIdText: {
-    fontSize: 11,
-    color: '#666',
-    marginTop: 2,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
   },
 });

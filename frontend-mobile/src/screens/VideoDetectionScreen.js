@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, ScrollView, StyleSheet, Alert, Image } from 'react-native';
 import { Button, Card, Title, Paragraph, ActivityIndicator } from 'react-native-paper';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import * as ImagePicker from 'expo-image-picker';
 import * as VideoThumbnails from 'expo-video-thumbnails';
 import { Video } from 'expo-av';
 import { API_BASE_URL } from '../services/api';
 import { getCurrentLocation } from '../services/locationService';
+import { lightTheme, spacing, typography, borderRadius } from '../config/theme';
 
 // Database saving disabled for faster response time
 // Results are displayed locally only
@@ -142,11 +144,13 @@ export default function VideoDetectionScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Title style={styles.headerTitle}>🎥 Video Detection</Title>
-        <Paragraph style={styles.headerDesc}>
-          Upload or record videos for road damage detection
-        </Paragraph>
+      {/* Hero Header */}
+      <View style={styles.heroHeader}>
+        <View style={styles.heroContent}>
+          <MaterialCommunityIcons name="video" size={48} color={lightTheme.primary} />
+          <Title style={styles.heroTitle}>Video Detection</Title>
+          <Paragraph style={styles.heroSubtitle}>Record or upload videos to detect road damage</Paragraph>
+        </View>
       </View>
 
       {/* Video Preview */}
@@ -164,7 +168,7 @@ export default function VideoDetectionScreen() {
             />
             <Card.Content>
               <Paragraph style={styles.videoName}>
-                📹 {selectedVideo.filename || selectedVideo.uri.split('/').pop()}
+                {selectedVideo.filename || selectedVideo.uri.split('/').pop()}
               </Paragraph>
               <Paragraph style={styles.videoInfo}>
                 Duration: {selectedVideo.duration ? `${(selectedVideo.duration / 1000).toFixed(1)}s` : 'Unknown'}
@@ -173,50 +177,68 @@ export default function VideoDetectionScreen() {
           </>
         ) : (
           <View style={styles.videoPlaceholder}>
-            <Paragraph style={styles.noVideoText}>No video selected</Paragraph>
+            <Title style={styles.placeholderTitle}>Ready to Process</Title>
+            <Paragraph style={styles.placeholderText}>
+              Select a video from your camera or gallery to analyze for road damage
+            </Paragraph>
+            <View style={styles.placeholderDots}>
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+            </View>
           </View>
         )}
       </Card>
 
       {/* Action Buttons */}
-      <View style={styles.buttonGroup}>
+      <View style={styles.actionButtonsContainer}>
         <Button
-          mode="contained"
+          mode="outlined"
           onPress={recordVideo}
-          icon="record"
-          style={styles.halfButton}
+          icon="plus-circle"
+          style={styles.flexButton}
+          labelStyle={styles.buttonLabel}
         >
-          Record
+          Record Video
         </Button>
         <Button
-          mode="contained"
+          mode="outlined"
           onPress={pickVideoFromGallery}
-          icon="folder-open"
-          style={styles.halfButton}
+          icon="folder-multiple"
+          style={styles.flexButton}
+          labelStyle={styles.buttonLabel}
         >
           Gallery
         </Button>
       </View>
 
-      {/* Process Button */}
+      {/* Process Button with Helper */}
       {selectedVideo && !isLoading && (
-        <Button
-          mode="contained"
-          onPress={handleProcessVideo}
-          icon="play-circle"
-          style={styles.processButton}
-          buttonColor="#2563eb"
-        >
-          Process Video
-        </Button>
+        <>
+          <Button
+            mode="contained"
+            onPress={handleProcessVideo}
+            icon="play-circle"
+            style={styles.processButton}
+            buttonColor={lightTheme.success}
+            labelStyle={styles.buttonLabel}
+          >
+            Analyze Video
+          </Button>
+          <Paragraph style={styles.analyzeHint}>AI will process and detect road damage in all frames</Paragraph>
+        </>
       )}
 
       {/* Loading */}
       {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator animating={true} size="large" color="#2563eb" />
-          <Paragraph style={styles.loadingText}>Processing video...</Paragraph>
-        </View>
+        <Card style={styles.loadingCard}>
+          <Card.Content style={styles.loadingContent}>
+            <MaterialCommunityIcons name="video-outline" size={48} color={lightTheme.primary} />
+            <Title style={styles.loadingTitle}>Processing Video</Title>
+            <Paragraph style={styles.loadingSubtitle}>Analyzing all frames for road damage...</Paragraph>
+            <ActivityIndicator animating={true} size="large" color={lightTheme.primary} style={styles.loadingSpinner} />
+          </Card.Content>
+        </Card>
       )}
 
       {/* Results */}
@@ -224,116 +246,97 @@ export default function VideoDetectionScreen() {
         <>
           {error && (
             <Card style={styles.errorCard}>
-              <Card.Content>
-                <Paragraph style={styles.errorText}>⚠️ {error}</Paragraph>
+              <Card.Content style={styles.errorContent}>
+                <MaterialCommunityIcons name="alert-circle" size={24} color={lightTheme.danger} />
+                <Paragraph style={styles.errorText}>{error}</Paragraph>
               </Card.Content>
             </Card>
           )}
 
-          <Card style={styles.statsCard}>
-            <Card.Title title="Analysis Results" />
-            <Card.Content>
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Paragraph style={styles.statLabel}>Status</Paragraph>
-                  <Paragraph style={styles.statValue}>Processed</Paragraph>
-                </View>
-                <View style={styles.statItem}>
-                  <Paragraph style={styles.statLabel}>Duration</Paragraph>
-                  <Paragraph style={styles.statValue}>{result.duration}</Paragraph>
-                </View>
-                <View style={styles.statItem}>
-                  <Paragraph style={styles.statLabel}>Frames</Paragraph>
-                  <Paragraph style={styles.statValue}>{result.framesAnalyzed}</Paragraph>
-                </View>
+          {/* Results Header */}
+          <View style={styles.resultsHeader}>
+            <MaterialCommunityIcons name="check-circle" size={32} color={lightTheme.success} />
+            <View style={styles.resultsHeaderContent}>
+              <Title style={styles.resultsTitle}>Detection Complete</Title>
+              <Paragraph style={styles.resultsSubtitle}>Full video analyzed successfully</Paragraph>
+            </View>
+          </View>
+
+          {/* Summary Cards */}
+          <View style={styles.summaryCards}>
+            <View style={styles.summaryCard}>
+              <View style={[styles.summaryIconContainer, { backgroundColor: `${lightTheme.primary}15` }]}>
+                <MaterialCommunityIcons name="play" size={24} color={lightTheme.primary} />
               </View>
-              <Paragraph style={styles.statusNote}>
-                Full video scanned with YOLO detection model. All frames analyzed for road damage and anomalies.
-              </Paragraph>
-            </Card.Content>
-          </Card>
+              <Paragraph style={styles.summaryLabel}>Duration</Paragraph>
+              <Title style={styles.summaryValue}>{result.duration}</Title>
+            </View>
+            <View style={styles.summaryCard}>
+              <View style={[styles.summaryIconContainer, { backgroundColor: `${lightTheme.info}15` }]}>
+                <MaterialCommunityIcons name="video" size={24} color={lightTheme.info} />
+              </View>
+              <Paragraph style={styles.summaryLabel}>Frames</Paragraph>
+              <Title style={styles.summaryValue}>{result.framesAnalyzed}</Title>
+            </View>
+            <View style={styles.summaryCard}>
+              <View style={[styles.summaryIconContainer, { backgroundColor: `${lightTheme.success}15` }]}>
+                <MaterialCommunityIcons name="check" size={24} color={lightTheme.success} />
+              </View>
+              <Paragraph style={styles.summaryLabel}>Status</Paragraph>
+              <Title style={styles.summaryValue}>Done</Title>
+            </View>
+          </View>
 
-          {processedFrames.length > 0 || result?.videoUrl ? (
-            <>
-              <Card style={styles.framesCard}>
-                <Card.Title title="Processed Video with Detections" />
-                <Card.Content>
-                  <Paragraph style={styles.framesDesc}>
-                    Your video has been analyzed with AI detection. All detected objects are marked with bounding boxes.
-                  </Paragraph>
-                  
-                  {result?.videoUrl ? (
-                    <View style={styles.processedVideoContainer}>
-                      <Video
-                        source={{ uri: result.videoUrl }}
-                        rate={1.0}
-                        volume={1.0}
-                        isMuted={false}
-                        resizeMode="contain"
-                        useNativeControls
-                        style={styles.processedVideoPlayer}
-                      />
-                      <View style={styles.successBadge}>
-                        <Paragraph style={styles.successText}>Detection Complete - Ready to Review</Paragraph>
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={styles.loadingContainer}>
-                      <Paragraph style={styles.loadingText}>
-                        Processing your video... This may take a few minutes.
-                      </Paragraph>
-                    </View>
-                  )}
-                </Card.Content>
-              </Card>
-
-              <Card style={styles.detectionInfoCard}>
-                <Card.Title title="Detection Features" />
-                <Card.Content>
-                  <View style={styles.featureRow}>
-                    <Paragraph style={styles.featureTitle}>Real-time Detection</Paragraph>
-                    <Paragraph style={styles.featureDesc}>YOLO model processes every frame</Paragraph>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Paragraph style={styles.featureTitle}>Bounding Boxes</Paragraph>
-                    <Paragraph style={styles.featureDesc}>All objects are precisely marked</Paragraph>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Paragraph style={styles.featureTitle}>Classification</Paragraph>
-                    <Paragraph style={styles.featureDesc}>Objects categorized by type</Paragraph>
-                  </View>
-                  <View style={styles.featureRow}>
-                    <Paragraph style={styles.featureTitle}>Tracking</Paragraph>
-                    <Paragraph style={styles.featureDesc}>Detections tracked across frames</Paragraph>
-                  </View>
-                </Card.Content>
-              </Card>
-            </>
-          ) : null}
+          {/* Processed Video */}
+          {result?.videoUrl && (
+            <View style={styles.processedVideoSection}>
+              <Video
+                source={{ uri: result.videoUrl }}
+                rate={1.0}
+                volume={1.0}
+                isMuted={false}
+                resizeMode="contain"
+                useNativeControls
+                style={styles.processedVideoPlayer}
+              />
+              <View style={styles.successBadge}>
+                <MaterialCommunityIcons name="check-circle" size={20} color={lightTheme.success} />
+                <Paragraph style={styles.successText}>Ready for Review</Paragraph>
+              </View>
+            </View>
+          )}
 
           <Button
             mode="outlined"
             onPress={handleReset}
             icon="refresh"
-            style={styles.resetButton}
+            style={[styles.resetButton, { borderColor: lightTheme.danger }]}
+            labelStyle={{ color: lightTheme.danger }}
           >
             Reset
           </Button>
         </>
       )}
 
-      {/* Info Box */}
-      <Card style={styles.infoCard}>
-        <Card.Title title="ℹ️ Video Requirements" />
-        <Card.Content>
-          <Paragraph style={styles.infoText}>
-            • Supported formats: MP4, MOV, AVI{'\n'}
-            • Max file size: 500MB{'\n'}
-            • Recommended resolution: 720p or higher{'\n'}
-            • Processing time varies by length
-          </Paragraph>
-        </Card.Content>
-      </Card>
+      {/* Requirements Banner */}
+      <View style={styles.requirementsContainer}>
+        <View style={styles.requirementChip}>
+          <MaterialCommunityIcons name="film" size={14} color={lightTheme.primary} />
+          <Paragraph style={styles.chipText}>MP4, MOV</Paragraph>
+        </View>
+        <View style={styles.requirementChip}>
+          <MaterialCommunityIcons name="database" size={14} color={lightTheme.warning} />
+          <Paragraph style={styles.chipText}>≤500MB</Paragraph>
+        </View>
+        <View style={styles.requirementChip}>
+          <MaterialCommunityIcons name="television" size={14} color={lightTheme.success} />
+          <Paragraph style={styles.chipText}>720p+</Paragraph>
+        </View>
+        <View style={styles.requirementChip}>
+          <MaterialCommunityIcons name="clock-fast" size={14} color={lightTheme.info} />
+          <Paragraph style={styles.chipText}>Fast</Paragraph>
+        </View>
+      </View>
     </ScrollView>
   );
 }
@@ -341,28 +344,37 @@ export default function VideoDetectionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: lightTheme.background,
   },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 12,
+  // Hero Header
+  heroHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
+  heroContent: {
+    alignItems: 'center',
   },
-  headerDesc: {
-    fontSize: 13,
-    color: '#666',
-    marginTop: 4,
+  heroTitle: {
+    fontSize: typography.h3.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    marginTop: spacing.md,
+  },
+  heroSubtitle: {
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   videoCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.lg,
+    elevation: 3,
     overflow: 'hidden',
+    backgroundColor: lightTheme.surface,
   },
   videoPlayer: {
     width: '100%',
@@ -374,127 +386,252 @@ const styles = StyleSheet.create({
     height: 300,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f5',
+    paddingHorizontal: spacing.lg,
+    backgroundColor: `${lightTheme.border}10`,
+  },
+  placeholderTitle: {
+    fontSize: typography.h4.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  placeholderText: {
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  placeholderDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: lightTheme.border,
   },
   videoName: {
-    fontSize: 14,
+    fontSize: typography.body.fontSize,
     fontWeight: '600',
-    color: '#333',
+    color: lightTheme.text.primary,
   },
   videoInfo: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 8,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.md,
   },
-  noVideoText: {
-    fontSize: 14,
-    color: '#999',
-    textAlign: 'center',
-  },
-  buttonGroup: {
+  actionButtonsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 12,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+    gap: spacing.md,
   },
-  halfButton: {
+  flexButton: {
     flex: 1,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+  },
+  buttonLabel: {
+    fontSize: typography.body.fontSize,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
   processButton: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingVertical: 6,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.md,
   },
-  loadingContainer: {
+  analyzeHint: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    fontStyle: 'italic',
+  },
+  loadingCard: {
+    marginHorizontal: spacing.lg,
+    marginVertical: spacing.xl,
+    borderRadius: borderRadius.lg,
+    elevation: 3,
+    backgroundColor: lightTheme.surface,
+  },
+  loadingContent: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: spacing.xxl,
   },
-  loadingText: {
-    marginTop: 12,
-    color: '#2563eb',
+  loadingTitle: {
+    fontSize: typography.h5.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    marginTop: spacing.lg,
   },
-  statsCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
+  loadingSubtitle: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  loadingSpinner: {
+    marginTop: spacing.lg,
+  },
+  // Results Header
+  resultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    backgroundColor: `${lightTheme.success}12`,
+    borderLeftWidth: 5,
+    borderLeftColor: lightTheme.success,
+    borderRadius: borderRadius.lg,
+  },
+  resultsHeaderContent: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  resultsTitle: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    color: lightTheme.success,
+    marginBottom: spacing.xs,
+  },
+  resultsSubtitle: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.success,
+  },
+  // Summary Cards
+  summaryCards: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
+  },
+  summaryCard: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+    borderRadius: borderRadius.lg,
+    backgroundColor: lightTheme.surface,
+    elevation: 3,
+    alignItems: 'center',
+  },
+  summaryIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  summaryLabel: {
+    fontSize: typography.small.fontSize,
+    fontWeight: '500',
+    color: lightTheme.text.secondary,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
+  },
+  summaryValue: {
+    fontSize: typography.h5.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    textAlign: 'center',
+  },
+
+  resetButton: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xxl,
+    paddingVertical: spacing.md,
+    borderWidth: 1.5,
+  },
+  // Requirements Container
+  requirementsContainer: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.xxl,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'flex-start',
+  },
+  requirementChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.xl,
+    backgroundColor: lightTheme.surface,
     elevation: 2,
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: `${lightTheme.border}20`,
   },
-  resultVideoCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    elevation: 2,
+  chipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: lightTheme.text.primary,
+  },
+  // Processed Video Section
+  processedVideoSection: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
+    backgroundColor: '#000',
+    elevation: 3,
   },
-  resultVideoPlayer: {
+  processedVideoPlayer: {
     width: '100%',
     height: 300,
     backgroundColor: '#000',
   },
-  statRow: {
+  successBadge: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    alignItems: 'center',
+    backgroundColor: `${lightTheme.success}15`,
+    borderColor: lightTheme.success,
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
-  statLabel: {
-    fontSize: 13,
-    color: '#666',
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#2563eb',
-  },
-  detectionCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    elevation: 2,
-  },
-  detectionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  detectionClass: {
-    fontSize: 13,
+  successText: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.success,
     fontWeight: '600',
-    color: '#333',
-  },
-  detectionFrame: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
-  },
-  detectionConfidence: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#10b981',
-  },
-  resetButton: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    borderColor: '#ef4444',
-  },
-  infoCard: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    elevation: 2,
-  },
-  infoText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 20,
+    flex: 1,
   },
   errorCard: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    backgroundColor: '#fee2e2',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    backgroundColor: `${lightTheme.danger}15`,
+    borderRadius: borderRadius.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: lightTheme.danger,
+  },
+  errorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
   },
   errorText: {
-    color: '#991b1b',
-    fontSize: 12,
+    color: lightTheme.danger,
+    fontSize: typography.small.fontSize,
+    fontWeight: '600',
+    marginLeft: spacing.md,
+    flex: 1,
   },
   infoMessageCard: {
     marginHorizontal: 16,
@@ -652,37 +789,51 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   detectionInfoCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    elevation: 2,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.lg,
+    elevation: 3,
+    backgroundColor: lightTheme.surface,
   },
-  featureRow: {
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+  detectionInfoTitle: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    marginBottom: spacing.lg,
   },
-  featureTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+  // Processed Video Section
+  processedVideoSection: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    elevation: 3,
   },
-  featureDesc: {
-    fontSize: 12,
-    color: '#666',
+  processedVideoPlayer: {
+    width: '100%',
+    height: 300,
+    backgroundColor: '#000',
   },
   successBadge: {
-    backgroundColor: '#f0fdf4',
-    borderColor: '#22c55e',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${lightTheme.success}15`,
+    borderColor: lightTheme.success,
     borderWidth: 1,
-    borderRadius: 6,
-    padding: 10,
-    marginTop: 10,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   successText: {
-    fontSize: 12,
-    color: '#15803d',
+    fontSize: typography.small.fontSize,
+    color: lightTheme.success,
     fontWeight: '600',
-    textAlign: 'center',
+    flex: 1,
   },
+
 });

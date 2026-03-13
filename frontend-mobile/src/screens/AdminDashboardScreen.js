@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, FlatList, Alert } from 'react-native';
 import { Card, Title, Paragraph, Button, Chip, Menu } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { API_BASE_URL } from '../services/api';
+import { lightTheme, spacing, typography, borderRadius } from '../config/theme';
 import LeafletMapView from '../components/LeafletMapView';
 
 // Helper component for empty states
@@ -24,8 +25,8 @@ function TabButton({ active, onPress, icon, label }) {
       onPress={onPress}
       icon={icon}
       style={[styles.tabButton, active && styles.tabButtonActive]}
-      buttonColor={active ? '#667eea' : undefined}
-      textColor={active ? '#fff' : '#667eea'}
+      buttonColor={active ? lightTheme.primary : undefined}
+      textColor={active ? '#fff' : lightTheme.primary}
       labelStyle={styles.tabButtonLabel}
     >
       {label}
@@ -64,18 +65,18 @@ async function fetchLocationsData() {
     }
     
     if (!response.ok) {
-      console.warn(`❌ HTTP ${response.status}, using mock data`);
+      console.warn(`HTTP ${response.status}, using mock data`);
       return generateMockLocations();
     }
 
     const data = await response.json();
     
     if (!Array.isArray(data)) {
-      console.warn('❌ Response is not an array, using mock data');
+      console.warn('Response is not an array, using mock data');
       return generateMockLocations();
     }
     
-    console.log(`✅ Successfully fetched ${data.length} potholes from backend`);
+    console.log(`Successfully fetched ${data.length} potholes from backend`);
     
     // Transform potholes to location format for map
     const transformedLocations = data
@@ -122,7 +123,7 @@ async function fetchLocationsData() {
       })
       .filter(item => item !== null);
     
-    console.log(`✅ Transformed ${transformedLocations.length} valid locations`);
+    console.log(`Transformed ${transformedLocations.length} valid locations`);
     return transformedLocations;
     
   } catch (error) {
@@ -231,64 +232,51 @@ export default function AdminDashboardScreen({ navigation }) {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Enhanced Header with Gradient Background */}
-      <View style={styles.headerBackground}>
-        <View style={styles.headerOverlay} />
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Title style={styles.headerTitle}>Dashboard</Title>
-            <Paragraph style={styles.headerSubtitle}>System Analytics & Monitoring</Paragraph>
-          </View>
-          
-          <Menu
-            visible={menuVisible}
-            onDismiss={() => setMenuVisible(false)}
-            anchor={
-              <Button
-                icon="menu"
-                onPress={() => setMenuVisible(true)}
-                textColor="#fff"
-              />
-            }
-          >
-            <Menu.Item
-              onPress={handleLogout}
-              title="Logout"
-              leadingIcon="logout"
-            />
-          </Menu>
+      {/* Modern Hero Header */}
+      <View style={styles.heroHeader}>
+        <View style={styles.heroContent}>
+          <MaterialCommunityIcons name="chart-box-plus-outline" size={48} color={lightTheme.primary} />
+          <Title style={styles.heroTitle}>Admin Dashboard</Title>
+          <Paragraph style={styles.heroSubtitle}>System Analytics & Real-Time Monitoring</Paragraph>
         </View>
       </View>
 
-      {/* Enhanced Tab Buttons */}
+      {/* Modern Tab Buttons */}
       <View style={styles.tabButtonsContainer}>
         <View style={styles.tabButtons}>
           <TabButton
             active={activeTab === 'stats'}
             onPress={() => setActiveTab('stats')}
             icon="chart-line"
-            label="Stats"
+            label=""
           />
           <TabButton
             active={activeTab === 'images'}
             onPress={() => setActiveTab('images')}
             icon="image-multiple"
-            label="Images"
+            label=""
           />
           <TabButton
             active={activeTab === 'videos'}
             onPress={() => setActiveTab('videos')}
             icon="video"
-            label="Videos"
+            label=""
           />
           <TabButton
             active={activeTab === 'map'}
             onPress={() => setActiveTab('map')}
             icon="map"
-            label="Map"
+            label=""
           />
-
         </View>
+        <Button
+          icon="logout"
+          onPress={handleLogout}
+          textColor={lightTheme.danger}
+          style={styles.logoutButton}
+        >
+          Logout
+        </Button>
       </View>
 
       {/* Content */}
@@ -306,83 +294,127 @@ function StatisticsContent({ stats }) {
   return (
     <View style={styles.contentSection}>
       {/* Key Metrics Grid */}
-      <View style={styles.metricsHeader}>
-        <Title style={styles.sectionTitle}>Key Metrics</Title>
-        <Paragraph style={styles.sectionSubtitle}>Real-time system statistics</Paragraph>
-      </View>
+      <Title style={styles.sectionTitle}>Overview</Title>
       
       <View style={styles.statsGrid}>
         <StatCard
-          title="Total Detections"
+          title="Total"
           value={stats.totalDetections}
           icon="check-circle"
-          color="#10b981"
+          color={lightTheme.success}
         />
         <StatCard
-          title="Potholes Found"
+          title="Potholes"
           value={stats.potholes}
           icon="pot-mix"
-          color="#ef4444"
+          color={lightTheme.danger}
         />
         <StatCard
-          title="Litter Items"
+          title="Litter"
           value={stats.litter}
           icon="trash-can"
-          color="#f59e0b"
+          color={lightTheme.warning}
         />
         <StatCard
-          title="Other Damage"
+          title="Other"
           value={stats.otherDamage}
           icon="alert-circle"
-          color="#667eea"
+          color={lightTheme.primary}
         />
       </View>
 
-      {/* Performance Metrics Card */}
+      {/* Quick Stats Card */}
       <Card style={styles.metricsCard}>
         <Card.Content>
-          <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="speedometer" size={24} color="#667eea" />
-            <Title style={styles.cardTitle}>Performance</Title>
+          <View style={styles.quickStatsGrid}>
+            <View style={styles.quickStatItem}>
+              <MaterialCommunityIcons name="account-multiple" size={20} color={lightTheme.primary} />
+              <Paragraph style={styles.quickStatLabel}>Active Users</Paragraph>
+              <Title style={styles.quickStatValue}>{stats.activeUsers}</Title>
+            </View>
+            <View style={styles.quickStatItem}>
+              <MaterialCommunityIcons name="check-all" size={20} color={lightTheme.success} />
+              <Paragraph style={styles.quickStatLabel}>Resolved</Paragraph>
+              <Title style={styles.quickStatValue}>{stats.reportsResolved}</Title>
+            </View>
+            <View style={styles.quickStatItem}>
+              <MaterialCommunityIcons name="clock-fast" size={20} color={lightTheme.warning} />
+              <Paragraph style={styles.quickStatLabel}>Latency</Paragraph>
+              <Title style={styles.quickStatValue}>{stats.averageLatency}ms</Title>
+            </View>
+            <View style={styles.quickStatItem}>
+              <MaterialCommunityIcons name="server-network" size={20} color={lightTheme.info} />
+              <Paragraph style={styles.quickStatLabel}>Uptime</Paragraph>
+              <Title style={styles.quickStatValue}>99.8%</Title>
+            </View>
           </View>
-          
-          <MetricRow label="Active Users" value={stats.activeUsers} icon="account-multiple" />
-          <MetricRow label="Reports Resolved" value={stats.reportsResolved} icon="check-all" />
-          <MetricRow label="Avg Latency" value={`${stats.averageLatency}ms`} icon="clock-fast" />
-          <MetricRow label="Uptime" value="99.8%" icon="server-network" />
         </Card.Content>
       </Card>
 
-      {/* System Health Card */}
+      {/* System Status */}
       <Card style={styles.healthCard}>
         <Card.Content>
-          <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="heart-pulse" size={24} color="#10b981" />
-            <Title style={styles.cardTitle}>System Health</Title>
+          <Title style={styles.cardTitle}>System Status</Title>
+          <View style={styles.statusGrid}>
+            <StatusItem label="Accuracy" value="94.7%" icon="target" color={lightTheme.success} />
+            <StatusItem label="Processing" value="2.3s" icon="lightning-bolt" color={lightTheme.info} />
+            <StatusItem label="Trend" value="↑ 24%" icon="trending-up" color={lightTheme.warning} />
           </View>
-          
-          <View style={styles.healthItem}>
-            <View style={styles.healthStatus}>
-              <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
-              <Paragraph style={styles.healthLabel}>Detection Accuracy</Paragraph>
-            </View>
-            <Paragraph style={styles.healthValue}>94.7%</Paragraph>
+        </Card.Content>
+      </Card>
+
+      {/* Detection Trend Chart */}
+      <Card style={styles.chartCard}>
+        <Card.Content>
+          <View style={styles.chartHeader}>
+            <MaterialCommunityIcons name="chart-line" size={24} color={lightTheme.primary} />
+            <Title style={styles.chartTitle}>Weekly Trends</Title>
           </View>
-          
-          <View style={styles.healthItem}>
-            <View style={styles.healthStatus}>
-              <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
-              <Paragraph style={styles.healthLabel}>Processing Time</Paragraph>
-            </View>
-            <Paragraph style={styles.healthValue}>2.3s avg</Paragraph>
+          <View style={styles.trendChart}>
+            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, idx) => {
+              const values = [120, 150, 140, 180, 200, 165, 190];
+              const maxValue = Math.max(...values);
+              const height = (values[idx] / maxValue) * 120;
+              return (
+                <View key={day} style={styles.barContainer}>
+                  <View style={[styles.bar, { height: height, backgroundColor: lightTheme.primary }]} />
+                  <Paragraph style={styles.barLabel}>{day}</Paragraph>
+                </View>
+              );
+            })}
           </View>
-          
-          <View style={styles.healthItem}>
-            <View style={styles.healthStatus}>
-              <View style={[styles.statusDot, { backgroundColor: '#10b981' }]} />
-              <Paragraph style={styles.healthLabel}>Detection Trend</Paragraph>
+        </Card.Content>
+      </Card>
+
+      {/* Detection Distribution */}
+      <Card style={styles.chartCard}>
+        <Card.Content>
+          <View style={styles.chartHeader}>
+            <MaterialCommunityIcons name="chart-pie" size={24} color={lightTheme.primary} />
+            <Title style={styles.chartTitle}>Detection Breakdown</Title>
+          </View>
+          <View style={styles.distributionChart}>
+            <View style={styles.distributionItem}>
+              <View style={[styles.distributionBar, { backgroundColor: lightTheme.success, width: '68%' }]} />
+              <View style={styles.distributionLabel}>
+                <Paragraph style={styles.distributionName}>Potholes</Paragraph>
+                <Title style={styles.distributionValue}>{stats.potholes}</Title>
+              </View>
             </View>
-            <Paragraph style={styles.healthValue}>↑ 24% this week</Paragraph>
+            <View style={styles.distributionItem}>
+              <View style={[styles.distributionBar, { backgroundColor: lightTheme.warning, width: '23%' }]} />
+              <View style={styles.distributionLabel}>
+                <Paragraph style={styles.distributionName}>Litter</Paragraph>
+                <Title style={styles.distributionValue}>{stats.litter}</Title>
+              </View>
+            </View>
+            <View style={styles.distributionItem}>
+              <View style={[styles.distributionBar, { backgroundColor: lightTheme.primary, width: '9%' }]} />
+              <View style={styles.distributionLabel}>
+                <Paragraph style={styles.distributionName}>Other</Paragraph>
+                <Title style={styles.distributionValue}>{stats.otherDamage}</Title>
+              </View>
+            </View>
           </View>
         </Card.Content>
       </Card>
@@ -424,7 +456,11 @@ function ImagesContent({ images }) {
                       {item.detections} object{item.detections !== 1 ? 's' : ''} • {item.timestamp}
                     </Paragraph>
                   </View>
-                  <Chip mode="flat" style={styles.statusChip}>
+                  <Chip 
+                    mode="flat" 
+                    style={styles.statusChip}
+                    labelStyle={styles.statusChipLabel}
+                  >
                     {item.status}
                   </Chip>
                 </View>
@@ -492,7 +528,11 @@ function VideosContent({ videos }) {
                       {item.duration} • {item.detections} detection{item.detections !== 1 ? 's' : ''} • {item.timestamp}
                     </Paragraph>
                   </View>
-                  <Chip mode="flat" style={styles.statusChip}>
+                  <Chip 
+                    mode="flat" 
+                    style={styles.statusChip}
+                    labelStyle={styles.statusChipLabel}
+                  >
                     {item.detections}
                   </Chip>
                 </View>
@@ -645,7 +685,7 @@ function MapContent({ locations }) {
 
 function StatCard({ title, value, icon, color }) {
   return (
-    <Card style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 4 }]}>
+    <Card style={[styles.statCard, { borderLeftColor: color }]}>
       <Card.Content style={styles.statCardContent}>
         <View style={[styles.statCardIcon, { backgroundColor: color + '15' }]}>
           <MaterialCommunityIcons name={icon} size={28} color={color} />
@@ -671,213 +711,342 @@ function MetricRow({ label, value, icon }) {
   );
 }
 
+function StatusItem({ label, value, icon, color }) {
+  return (
+    <View style={styles.statusItem}>
+      <View style={[styles.statusIconBg, { backgroundColor: color + '15' }]}>
+        <MaterialCommunityIcons name={icon} size={24} color={color} />
+      </View>
+      <Paragraph style={styles.statusLabel}>{label}</Paragraph>
+      <Title style={styles.statusValueText}>{value}</Title>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: lightTheme.background,
   },
-  headerBackground: {
-    backgroundColor: '#667eea',
-    paddingBottom: 30,
-    position: 'relative',
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  header: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  // Hero Header
+  heroHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xxl,
     alignItems: 'center',
-    zIndex: 1,
+    marginBottom: spacing.lg,
   },
-  headerText: {
-    flex: 1,
+  heroContent: {
+    alignItems: 'center',
   },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 20,
+  heroTitle: {
+    fontSize: typography.h3.fontSize,
     fontWeight: '700',
+    color: lightTheme.text.primary,
+    marginTop: spacing.md,
   },
-  headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 12,
-    marginTop: 2,
+  heroSubtitle: {
+    fontSize: typography.body.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.sm,
+    textAlign: 'center',
   },
   tabButtonsContainer: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 4,
-    elevation: 1,
+    backgroundColor: lightTheme.surface,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
+    elevation: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   tabButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
+    flex: 1,
   },
   tabButton: {
     flex: 1,
-    borderRadius: 8,
+    borderRadius: borderRadius.lg,
   },
   tabButtonActive: {
-    elevation: 2,
+    elevation: 3,
   },
   tabButtonLabel: {
     fontSize: 12,
     fontWeight: '600',
   },
+  logoutButton: {
+    marginLeft: spacing.sm,
+  },
   content: {
-    paddingBottom: 20,
+    paddingBottom: spacing.xxl,
   },
   contentSection: {
-    paddingHorizontal: 12,
-    paddingTop: 12,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
   },
   /* Header Styles */
   listHeader: {
-    marginBottom: 16,
-    paddingHorizontal: 4,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 4,
+    color: lightTheme.text.primary,
+    marginBottom: spacing.xs,
   },
   sectionSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginTop: 2,
-  },
-  locationsHeader: {
-    marginBottom: 12,
-    marginTop: 16,
-    paddingHorizontal: 4,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.xs,
   },
   metricsHeader: {
-    marginBottom: 12,
+    marginBottom: spacing.lg,
   },
   /* Card Styles */
   itemCard: {
-    marginBottom: 12,
-    elevation: 2,
-    borderRadius: 12,
-  },
-  card: {
-    marginBottom: 12,
-    elevation: 2,
+    marginBottom: spacing.lg,
+    elevation: 3,
+    borderRadius: borderRadius.lg,
+    backgroundColor: lightTheme.surface,
   },
   /* Statistics Grid */
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   statCard: {
-    width: '48.5%',
-    elevation: 2,
-    borderRadius: 12,
+    width: '48%',
+    elevation: 3,
+    borderRadius: borderRadius.lg,
+    backgroundColor: lightTheme.surface,
+    borderLeftWidth: 4,
   },
   statCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: spacing.md,
   },
   statCardIcon: {
     width: 44,
     height: 44,
-    borderRadius: 8,
+    borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   statCardInfo: {
     flex: 1,
   },
   statCardTitle: {
-    fontSize: 12,
-    color: '#6b7280',
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
     fontWeight: '500',
   },
   statCardValue: {
-    fontSize: 20,
+    fontSize: typography.h5.fontSize,
     fontWeight: '700',
-    color: '#1f2937',
-    marginTop: 2,
+    color: lightTheme.text.primary,
+    marginTop: spacing.xs,
+  },
+  /* Quick Stats Grid */
+  quickStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  quickStatItem: {
+    width: '48%',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  quickStatLabel: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.sm,
+  },
+  quickStatValue: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    marginTop: spacing.xs,
+  },
+  /* Status Grid */
+  statusGrid: {
+    marginTop: spacing.lg,
+    gap: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statusItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  statusIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  statusItemContent: {
+    alignItems: 'center',
+  },
+  statusLabel: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  statusValueText: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    textAlign: 'center',
+    color: lightTheme.text.primary,
+    marginTop: spacing.xs,
   },
   /* Metrics Card */
   metricsCard: {
-    marginBottom: 12,
-    elevation: 2,
-    borderRadius: 12,
+    marginBottom: spacing.lg,
+    elevation: 3,
+    borderRadius: borderRadius.lg,
+    backgroundColor: lightTheme.surface,
   },
   healthCard: {
-    marginBottom: 12,
-    elevation: 2,
-    borderRadius: 12,
+    marginBottom: spacing.lg,
+    elevation: 3,
+    borderRadius: borderRadius.lg,
+    backgroundColor: lightTheme.surface,
+  },
+  chartCard: {
+    marginBottom: spacing.lg,
+    elevation: 3,
+    borderRadius: borderRadius.lg,
+    backgroundColor: lightTheme.surface,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  chartTitle: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
+    marginLeft: spacing.md,
+  },
+  trendChart: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    height: 160,
+    paddingBottom: spacing.md,
+  },
+  barContainer: {
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: spacing.xs,
+  },
+  bar: {
+    width: '100%',
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+    minHeight: 8,
+  },
+  barLabel: {
+    fontSize: 10,
+    color: lightTheme.text.secondary,
+    fontWeight: '600',
+  },
+  distributionChart: {
+    gap: spacing.lg,
+  },
+  distributionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  distributionBar: {
+    height: 24,
+    borderRadius: borderRadius.sm,
+    minWidth: 20,
+  },
+  distributionLabel: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  distributionName: {
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    fontWeight: '500',
+  },
+  distributionValue: {
+    fontSize: typography.h6.fontSize,
+    fontWeight: '700',
+    color: lightTheme.text.primary,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   cardTitle: {
-    fontSize: 16,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#1f2937',
-    marginLeft: 12,
+    color: lightTheme.text.primary,
+    marginLeft: spacing.md,
     flex: 1,
   },
   metricRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
-  },
-  metricRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: `${lightTheme.border}20`,
   },
   metricIconBg: {
     width: 36,
     height: 36,
-    borderRadius: 8,
-    backgroundColor: '#667eea15',
+    borderRadius: borderRadius.md,
+    backgroundColor: `${lightTheme.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   metricLabel: {
     flex: 1,
-    fontSize: 13,
-    color: '#6b7280',
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
     fontWeight: '500',
   },
   metricValue: {
-    fontSize: 15,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#1f2937',
+    color: lightTheme.text.primary,
   },
   /* Health Status */
   healthItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: `${lightTheme.border}20`,
   },
   healthStatus: {
     flexDirection: 'row',
@@ -888,37 +1057,37 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    marginRight: 10,
+    marginRight: spacing.md,
   },
   healthLabel: {
-    fontSize: 13,
-    color: '#6b7280',
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
     fontWeight: '500',
   },
   healthValue: {
-    fontSize: 14,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#10b981',
+    color: lightTheme.success,
   },
   /* Image/Video Items */
   itemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   itemIconBg: {
     width: 44,
     height: 44,
-    borderRadius: 8,
-    backgroundColor: '#667eea15',
+    borderRadius: borderRadius.md,
+    backgroundColor: `${lightTheme.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },
   videoIconBg: {
     width: 44,
     height: 44,
-    borderRadius: 8,
-    backgroundColor: '#667eea',
+    borderRadius: borderRadius.md,
+    backgroundColor: lightTheme.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -926,34 +1095,45 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemTitle: {
-    fontSize: 15,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#1f2937',
+    color: lightTheme.text.primary,
   },
   itemMeta: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 4,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.xs,
   },
   statusChip: {
-    height: 28,
-    backgroundColor: '#10b98120',
+    backgroundColor: `${lightTheme.success}20`,
+    borderColor: lightTheme.success,
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+  },
+  statusChipLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: lightTheme.success,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   actionChip: {
-    backgroundColor: '#667eea20',
+    backgroundColor: `${lightTheme.primary}20`,
   },
   cardActions: {
-    paddingHorizontal: 0,
-    paddingRight: 8,
-    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    flexDirection: 'row',
   },
   actionButton: {
-    marginHorizontal: 0,
+    flex: 1,
+    marginHorizontal: spacing.xs,
   },
   /* Map Styles */
   mapContainer: {
-    marginHorizontal: -12,
-    marginBottom: 12,
+    marginHorizontal: -spacing.md,
+    marginBottom: spacing.lg,
     overflow: 'hidden',
     borderRadius: 0,
     width: '100%',
@@ -961,90 +1141,90 @@ const styles = StyleSheet.create({
   map: {
     width: '100%',
     height: 350,
-    backgroundColor: '#e8e8e8',
+    backgroundColor: lightTheme.border,
   },
   calloutContainer: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     minWidth: 160,
   },
   calloutTitle: {
-    fontSize: 14,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 4,
+    color: lightTheme.text.primary,
+    marginBottom: spacing.xs,
   },
   calloutText: {
-    fontSize: 12,
-    color: '#667eea',
-    marginBottom: 4,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.primary,
+    marginBottom: spacing.xs,
     fontWeight: '600',
   },
   calloutCoords: {
     fontSize: 10,
-    color: '#9ca3af',
+    color: lightTheme.text.secondary,
     fontWeight: '400',
   },
   /* Legend */
   legendCard: {
-    marginBottom: 12,
+    marginBottom: spacing.lg,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    paddingVertical: 4,
+    marginBottom: spacing.md,
+    paddingVertical: spacing.xs,
   },
   legendDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    marginRight: 10,
+    marginRight: spacing.md,
   },
   legendText: {
-    fontSize: 13,
-    color: '#6b7280',
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
     fontWeight: '500',
   },
   /* Selected Location Detail */
   selectedDetailCard: {
-    marginBottom: 12,
-    backgroundColor: '#f0f4ff',
-    borderColor: '#667eea',
+    marginBottom: spacing.lg,
+    backgroundColor: `${lightTheme.primary}08`,
+    borderColor: lightTheme.primary,
     borderWidth: 1.5,
   },
   selectedHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: spacing.lg,
   },
   closeButton: {
-    margin: -8,
+    margin: -spacing.sm,
   },
   detailsGrid: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    gap: spacing.md,
+    marginBottom: spacing.lg,
   },
   detailItem: {
     flex: 1,
-    backgroundColor: '#fff',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: lightTheme.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
   },
   detailLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: lightTheme.text.secondary,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#667eea',
+    color: lightTheme.primary,
     fontFamily: 'monospace',
   },
   navButton: {
@@ -1053,17 +1233,17 @@ const styles = StyleSheet.create({
   },
   /* Location List */
   locationCard: {
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
   },
   locationCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   severityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1080,46 +1260,46 @@ const styles = StyleSheet.create({
   },
   /* Selected Card */
   selectedCard: {
-    borderColor: '#667eea',
+    borderColor: lightTheme.primary,
     borderWidth: 2,
-    backgroundColor: '#f0f4ff',
+    backgroundColor: `${lightTheme.primary}08`,
   },
   /* Empty State */
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 60,
+    paddingVertical: spacing.xxxl,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize: typography.h6.fontSize,
     fontWeight: '700',
-    color: '#6b7280',
-    marginTop: 16,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.lg,
   },
   emptyDesc: {
-    fontSize: 13,
-    color: '#9ca3af',
-    marginTop: 8,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.md,
     textAlign: 'center',
     maxWidth: 200,
   },
   /* Map Styles */
   mapContainer: {
-    borderRadius: 12,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    marginBottom: 12,
+    marginBottom: spacing.lg,
     elevation: 2,
     paddingHorizontal: 0,
     paddingVertical: 0,
   },
   map: {
     flex: 1,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: lightTheme.border,
   },
   infoText: {
-    fontSize: 12,
-    color: '#6b7280',
-    marginTop: 8,
+    fontSize: typography.small.fontSize,
+    color: lightTheme.text.secondary,
+    marginTop: spacing.md,
     lineHeight: 18,
   },
 });

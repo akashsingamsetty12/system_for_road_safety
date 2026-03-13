@@ -61,7 +61,7 @@ export default function AdminLoginScreen({ navigation }) {
           routes: [{ name: 'AdminDashboard' }],
         });
       } else {
-        setError('❌ Invalid credentials. Please try again.');
+        setError('Invalid credentials. Please try again.');
         setPassword('');
         setPasswordError('');
         setLoading(false);

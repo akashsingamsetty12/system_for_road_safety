@@ -37,14 +37,14 @@ async function savePotholeDetection(detectionResult, latitude, longitude) {
 
     if (response.ok) {
       const saved = await response.json();
-      console.log('✅ Live detection saved to database:', saved.id);
+      console.log('Live detection saved to database:', saved.id);
       return true;
     } else {
       console.warn('⚠️ Failed to save live detection:', response.status);
       return false;
     }
   } catch (error) {
-    console.error('❌ Error saving live detection:', error.message);
+    console.error('Error saving live detection:', error.message);
     return false;
   }
 }
@@ -230,7 +230,7 @@ export default function LiveDetectionScreen() {
             onCameraReady={() => setCameraReady(true)}
           />
           <View style={styles.feedLabel}>
-            <Paragraph style={styles.feedLabelText}>📹 Live Feed</Paragraph>
+            <Paragraph style={styles.feedLabelText}>Live Feed</Paragraph>
           </View>
         </View>
 
